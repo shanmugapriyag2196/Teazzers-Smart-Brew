@@ -7,9 +7,10 @@ const ChatBot = () => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
-  // Pinecone Assistant API endpoint
+  // Pinecone Assistant API endpoint and key from environment variables
   const ASSISTANT_URL = process.env.VITE_PINECONE_ASSISTANT_URL || 
     'https://prod-1-data.ke.pinecone.io/assistant/chat/teazzers-data';
+  const API_KEY = process.env.VITE_PINECONE_API_KEY;
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -28,12 +29,17 @@ const ChatBot = () => {
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
 
     try {
+      // Check if API key is missing
+      if (!API_KEY) {
+        throw new Error('API key not configured. Please set VITE_PINECONE_API_KEY in your environment variables.');
+      }
+
       const response = await fetch(ASSISTANT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Note: In a real app, you might need an authorization header
-          // 'Authorization': `Bearer ${process.env.VITE_PINECONE_API_KEY}`
+          // Pinecone Assistant API expects an 'Api-Key' header
+          'Api-Key': API_KEY
         },
         body: JSON.stringify({
           messages: [{ role: 'user', content: userMessage }],
@@ -42,17 +48,29 @@ const ChatBot = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Try to parse error response
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch (e) {
+          // If JSON parsing fails, use the status text
+          errorMessage = `${response.status} ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
-      const assistantMessage = data.message || data.content || 'Sorry, I could not process that.';
+      // Adjust based on the actual response structure from Pinecone Assistant
+      const assistantMessage = data.message || data.content || 
+        (data.choices && data.choices[0] && data.choices[0].message?.content) ||
+        'Sorry, I could not process that.';
 
       // Add assistant response to chat
       setMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
     } catch (error) {
       console.error('Error:', error);
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Error: Could not connect to assistant. Please try again later.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${error.message}` }]);
     } finally {
       setIsLoading(false);
     }
