@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import './ChatBot.css';
 
-const PINECONE_ASSISTANT_URL = 'https://prod-1-data.ke.pinecone.io/assistant/chat/teazzers-data';
+const PINECONE_ASSISTANT_URL = import.meta.env.VITE_PINECONE_ASSISTANT_URL ||
+  'https://prod-1-data.ke.pinecone.io/assistant/chat/teazzers-data';
 
 function ChatBot({ selectedIssue }) {
   const [messages, setMessages] = useState([

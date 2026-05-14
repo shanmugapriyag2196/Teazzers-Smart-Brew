@@ -1,16 +1,50 @@
-# React + Vite
+# Teazzers Smart Brew
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A React dashboard and AI assistant for monitoring and troubleshooting Teazzers Smart Brew issues.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Dashboard** with 6 issue categories:
+  - Power & Electrical Issues
+  - Brewing Issues
+  - Heating Issues
+  - Leaking Issues
+  - Configuration Issues
+  - Servicing & Maintenance
 
-## React Compiler
+- **AI Chatbot** powered by Pinecone Assistant API
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Getting Started
 
-## Expanding the ESLint configuration
+```bash
+npm install
+npm run dev
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Build & Deploy
+
+```bash
+npm run build
+npm run preview
+```
+
+## Environment Variables
+
+Create a `.env` file in the root directory:
+
+```env
+VITE_PINECONE_ASSISTANT_URL=https://prod-1-data.ke.pinecone.io/assistant/chat/teazzers-data
+```
+
+Or use Vercel environment variables with `VITE_` prefix.
+
+## Tech Stack
+
+- React 19
+- Vite
+- Pinecone Assistant API
+- Deployed on Vercel
+
+## Repository
+
+https://github.com/shanmugapriyag2196/Teazzers-Smart-Brew.git
