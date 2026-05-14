@@ -9,7 +9,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "vite"
+    "start": "vite",
+    "vercel-build": "vite build"
   },
   "dependencies": {
     "react": "^19.2.6",
