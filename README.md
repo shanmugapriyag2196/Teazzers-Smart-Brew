@@ -1,16 +1,21 @@
-# React + Vite
+# Teazzers Smart Brew
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A dashboard for monitoring Teazzers Smart Brew issues with integrated Pinecone AI assistant for troubleshooting.
 
-Currently, two official plugins are available:
+## Environment Variables
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+For the application to work correctly, the following environment variables must be set:
 
-## React Compiler
+### Local Development
+Create a `.env` file in the project root:
+```
+VITE_PINECONE_ASSISTANT_URL=https://prod-1-data.ke.pinecone.io/assistant/chat/teazzers-data
+VITE_PINECONE_API_KEY=your_pinecone_api_key_here
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Vercel Deployment
+In your Vercel project settings (Settings → Environment Variables), set for the **Production** environment:
+- `VITE_PINECONE_ASSISTANT_URL`: `https://prod-1-data.ke.pinecone.io/assistant/chat/teazzers-data`
+- `VITE_PINECONE_API_KEY`: `your_actual_pinecone_api_key_here`
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+**Important**: Variables must be prefixed with `VITE_` to be exposed to the client-side code.
