@@ -12,6 +12,12 @@ const ChatBot = () => {
     'https://prod-1-data.ke.pinecone.io/assistant/chat/teazzers-data';
   const API_KEY = process.env.VITE_PINECONE_API_KEY;
 
+  // Debug logging (do not expose actual key)
+  useEffect(() => {
+    console.log(`[ChatBot] VITE_PINECONE_ASSISTANT_URL: ${ASSISTANT_URL}`);
+    console.log(`[ChatBot] VITE_PINECONE_API_KEY present: ${!!API_KEY}`);
+  }, [ASSISTANT_URL, API_KEY]);
+
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -69,7 +75,7 @@ const ChatBot = () => {
       // Add assistant response to chat
       setMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('ChatBot Error:', error);
       setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${error.message}` }]);
     } finally {
       setIsLoading(false);
