@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import './ChatBot.css';
 
-const API_URL = '/api/chat';
+const ASSISTANT_NAME = 'teazzers-data';
+const ASSISTANT_URL = `https://prod-1-data.ke.pinecone.io/assistant/chat/${ASSISTANT_NAME}`;
 
 const ChatBot = ({ selectedIssue }) => {
   const [messages, setMessages] = useState([
@@ -11,6 +12,8 @@ const ChatBot = ({ selectedIssue }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
+
+  const API_KEY = import.meta.env.VITE_PINECONE_API_KEY;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -41,11 +44,21 @@ const ChatBot = ({ selectedIssue }) => {
     setError(null);
     setMessages(prev => [...prev, userMessage]);
 
+    if (!API_KEY) {
+      const errMsg = 'PINECONE_API_KEY environment variable is missing. Set VITE_PINECONE_API_KEY in your Vercel environment variables.';
+      setError(errMsg);
+      setMessages(prev => [...prev, { role: 'assistant', content: `Configuration error: ${errMsg}` }]);
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const response = await fetch(API_URL, {
+      const response = await fetch(ASSISTANT_URL, {
         method: 'POST',
         headers: {
+          'Api-Key': API_KEY,
           'Content-Type': 'application/json',
+          'X-Pinecone-Api-Version': '2025-10',
         },
         body: JSON.stringify({
           messages: [...messages, userMessage],
