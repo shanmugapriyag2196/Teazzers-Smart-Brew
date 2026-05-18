@@ -1,0 +1,9 @@
+.dashboard-view .section-title {
+  padding: 0 32px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #334155;
+  margin-top: 8px;
+}
+
+/* Reuse Layout.css card styles — nothing extra needed here */

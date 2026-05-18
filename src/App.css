@@ -1,26 +1,28 @@
-.app {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  font-family: Arial, sans-serif;
-}
-
-header {
-  background-color: #2c3e50;
-  color: white;
-  padding: 20px;
+.placeholder-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 40px;
   text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 
-.main-content {
-  display: flex;
-  flex: 1;
-  padding: 20px;
-  gap: 20px;
+.placeholder-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
 }
 
-@media (max-width: 768px) {
-  .main-content {
-    flex-direction: column;
-  }
+.placeholder-card h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 8px;
+}
+
+.placeholder-card p {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0;
+  max-width: 400px;
+  margin-inline: auto;
 }

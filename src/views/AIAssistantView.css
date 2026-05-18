@@ -1,0 +1,9 @@
+.ai-chat-messages .typing-dots::after {
+  content: '';
+  animation: blink 1.4s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
