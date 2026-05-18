@@ -11,13 +11,13 @@ const issueData = [
 
 export default function DashboardView() {
   return (
-    <div className="dashboard-view">
+    <div className="dashboard-view" style={{ padding: 0 }}>
       <div className="page-header">
         <h2>Welcome Back, Admin</h2>
         <p>Here's what's happening with your Teazzers Smart Brew system today.</p>
       </div>
 
-      <p className="section-title" style={{ padding: '0 32px', marginBottom: 0 }}>Issue Categories Overview</p>
+      <p className="section-title">Issue Categories Overview</p>
       <div className="cards-grid">
         {issueData.map((item) => (
           <div key={item.id} className="stat-card">
