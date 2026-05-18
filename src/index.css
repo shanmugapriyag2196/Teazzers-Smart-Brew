@@ -1,6 +1,5 @@
 @import './components/Layout.css';
 @import './views/DashboardView.css';
-@import './views/AIAssistantView.css';
 @import './views/IssueCategoriesView.css';
 
 :root {

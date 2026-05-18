@@ -1,3 +1,6 @@
+import { useState, useEffect, useRef } from 'react';
+import './ChatBot.css';
+
 const ASSISTANT_NAME = 'teazzers-data';
 const ASSISTANT_URL = `https://prod-1-data.ke.pinecone.io/assistant/chat/${ASSISTANT_NAME}`;
 
