@@ -4,6 +4,7 @@ import AIAssistantView from './views/AIAssistantView';
 import IssueCategoriesView from './views/IssueCategoriesView';
 import UsersView from './views/UsersView';
 import SettingsView from './views/SettingsView';
+import './App.css';
 
 function App() {
   const [activeView, setActiveView] = useState('dashboard');
