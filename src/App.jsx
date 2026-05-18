@@ -16,9 +16,11 @@ function App() {
     'settings':        <SettingsView />,
   };
 
+  const current = views[activeView] || <DashboardView />;
+
   return (
     <Layout activeView={activeView} onViewChange={setActiveView}>
-      {views[activeView]}
+      {current}
     </Layout>
   );
 }

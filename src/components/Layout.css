@@ -2,6 +2,18 @@
   display: flex;
   min-height: 100vh;
   background: #f0f2f5;
+  width: 100%;
+}
+
+.layout > * { flex-shrink: 0; }
+.main-content { flex-shrink: 1; }
+
+[data-debug="layout-root"] .sidebar {
+  background: #1a1a2e !important;
+}
+
+[data-debug="layout-root"] .nav-item {
+  color: #fff !important;
 }
 
 /* ─── Sidebar ─── */
@@ -131,6 +143,8 @@
   margin-left: 240px;
   transition: margin-left 0.3s ease;
   overflow-y: auto;
+  min-width: 0;
+  background: #f0f2f5;
 }
 
 .sidebar.collapsed + .main-content,
