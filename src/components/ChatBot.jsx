@@ -1,16 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
-import './ChatBot.css';
-
 const ASSISTANT_NAME = 'teazzers-data';
 const ASSISTANT_URL = `https://prod-1-data.ke.pinecone.io/assistant/chat/${ASSISTANT_NAME}`;
 
 const ChatBot = ({ selectedIssue }) => {
-  const [messages, setMessages] = useState([
-    { role: 'assistant', content: "Hello! I'm your Teazzers Smart Brew assistant. Ask me anything about troubleshooting, maintenance, or configuration." }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [expanded, setExpanded] = useState({});
   const messagesEndRef = useRef(null);
 
   const API_KEY = import.meta.env.VITE_PINECONE_API_KEY;
@@ -43,6 +39,7 @@ const ChatBot = ({ selectedIssue }) => {
     setIsLoading(true);
     setError(null);
     setMessages(prev => [...prev, userMessage]);
+    setExpanded(prev => ({ ...prev, [prev.length]: false }));
 
     if (!API_KEY) {
       const errMsg = 'PINECONE_API_KEY environment variable is missing. Set VITE_PINECONE_API_KEY in your Vercel environment variables.';
@@ -61,7 +58,7 @@ const ChatBot = ({ selectedIssue }) => {
           'X-Pinecone-Api-Version': '2025-10',
         },
         body: JSON.stringify({
-          messages: [...messages, userMessage],
+          messages: messages.map(m => ({ role: m.role, content: m.content })),
           model: 'gpt-4o',
           stream: false,
         }),
@@ -88,6 +85,10 @@ const ChatBot = ({ selectedIssue }) => {
     }
   };
 
+  const toggleExpand = (index) => {
+    setExpanded(prev => ({ ...prev, [index]: !prev[index] }));
+  };
+
   return (
     <div className="chatbot-container">
       <div className="chatbot-header">
@@ -97,16 +98,32 @@ const ChatBot = ({ selectedIssue }) => {
       <div className="chatbot-messages" ref={messagesEndRef}>
         {messages.map((msg, index) => (
           <div key={index} className={`message ${msg.role}`}>
-            <div className="message-content">{msg.content}</div>
+            <div className={`message-content ${msg.role}`}>{msg.content}</div>
+            {msg.role === 'assistant' && msg.content.length > 300 && !expanded[index] && (
+              <button className="more-btn" onClick={() => toggleExpand(index)}>
+                More
+              </button>
+            )}
+            {msg.role === 'assistant' && expanded[index] && (
+              <button className="more-btn" onClick={() => toggleExpand(index)}>
+                Show less
+              </button>
+            )}
           </div>
         ))}
       </div>
       <form className="chatbot-form" onSubmit={sendMessage}>
-        <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask about troubleshooting..." disabled={isLoading} />
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Ask about troubleshooting, maintenance, or configuration..."
+          disabled={isLoading}
+        />
         <button type="submit" disabled={isLoading || !input.trim()}>Send</button>
       </form>
     </div>
   );
-};
+}
 
 export default ChatBot;
