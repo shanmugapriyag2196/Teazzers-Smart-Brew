@@ -9,6 +9,20 @@
   height: 600px;
 }
 
+/* When embedded inside .ai-chat-area (AI Assistant view), stretch to fill space */
+.ai-chat-area .chatbot-container {
+  max-width: none;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: 0;
+  border: none;
+}
+
+.ai-chat-area .chatbot-messages {
+  flex: 1;
+}
+
 .chatbot-header {
   background-color: #f0f0f0;
   padding: 15px;
