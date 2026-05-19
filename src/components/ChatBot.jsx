@@ -12,7 +12,7 @@ const HISTORY_INDEX_URL  = `https://${HISTORY_HOST}`;
 const HISTORY_QUERY_URL  = `${HISTORY_INDEX_URL}/query`;
 const HISTORY_UPSERT_URL = `${HISTORY_INDEX_URL}/vectors/upsert`;
 
-const EMBED_MODEL   = 'text-embedding-3-large';
+const EMBED_MODEL   = 'text-embedding-3-small';
 const EMBED_URL     = 'https://api.openai.com/v1/embeddings';
 const HISTORY_LIMIT = 20;
 
@@ -55,7 +55,7 @@ async function getEmbedding(text) {
 async function saveToHistory(question, answer) {
   try {
     const embedding = await getEmbedding(question);
-    if (!embedding.length) { alert('[history] saveToHistory: empty embedding — check VITE_OPENAI_API_KEY in Vercel\n\nThis means OpenAI returned no vector data. Check:\n1. VITE_OPENAI_API_KEY is set in Vercel Production env vars\n2. The key has embeddings:read permission\n3. The model text-embedding-3-large is accessible for your key'); return; }
+    if (!embedding.length) { alert('[history] saveToHistory: empty embedding — check VITE_OPENAI_API_KEY in Vercel\n\nThis means OpenAI returned no vector data. Check:\n1. VITE_OPENAI_API_KEY is set in Vercel Production env vars\n2. The key has embeddings:read scope\n3. The model text-embedding-3-small produces 1536-dim vectors — see .env.example for Pinecone index dimension fix'); return; }
     const id        = `hist_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const payload    = {
       vectors: {
@@ -164,14 +164,6 @@ export default function ChatBot({ selectedIssue }) {
     let cancelled = false;
     (async () => {
       setLoadingHistory(true);
-      // Log current index record count on mount
-      try {
-        const descR = await fetch(HISTORY_INDEX_URL + '/describe_index_stats', {
-          method: 'POST',
-          headers: historyHeaders(),
-        });
-        if (descR.ok) { const dd = await descR.json(); console.log('[history] describe_index_stats on mount:', JSON.stringify(dd)); }
-      } catch { /* best-effort */ }
       try {
         const list = await loadRecentHistory();
         if (!cancelled) setRecentHistory(list);
