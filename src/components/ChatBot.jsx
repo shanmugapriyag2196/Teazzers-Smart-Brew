@@ -12,13 +12,7 @@ const HISTORY_INDEX_URL  = `https://${HISTORY_HOST}`;
 const HISTORY_QUERY_URL  = `${HISTORY_INDEX_URL}/query`;
 const HISTORY_UPSERT_URL = `${HISTORY_INDEX_URL}/vectors/upsert`;
 
-// text-embedding-3-small supports dimensions: 512 | 1024 | 1536
-// Index was recreated with DIMENSION 1536 — pass dimensions explicitly.
-// Sending 1536 with text-embedding-3-small → Pinecone accepts the vector.
-// OMITTING dimensions → defaults to 1536 anyway — but being explicit avoids
-// future silent breakage if OpenAI changes defaults.
-const EMBED_MODEL   = 'text-embedding-3-small';
-const EMBED_DIM     = 1536;
+const EMBED_MODEL   = 'text-embedding-3-large';
 const EMBED_URL     = 'https://api.openai.com/v1/embeddings';
 const HISTORY_LIMIT = 20;
 
@@ -46,55 +40,41 @@ async function getEmbedding(text) {
   const r = await fetch(EMBED_URL, {
     method: 'POST',
     headers: oaHeaders(),
-    body: JSON.stringify({ input: text, model: EMBED_MODEL, dimensions: EMBED_DIM }),
+    body: JSON.stringify({ input: text, model: EMBED_MODEL }),
   });
-  if (!r.ok) { const t = await r.text(); alert('Embedding API error ' + r.status + '\n\n' + t.slice(0, 400)); throw new Error('Embedding failed: ' + r.status); }
+  if (!r.ok) throw new Error(`Embedding error ${r.status}`);
   const d = await r.json();
-  const rawEmbed = d?.data?.[0]?.embedding;
-  if (!Array.isArray(rawEmbed) || !rawEmbed.length) { alert('Embedding API did not return a valid vector.\ntype=' + typeof rawEmbed + (rawEmbed ? ', length=' + rawEmbed.length : '') + '\ndata=' + JSON.stringify(d?.data).slice(0, 300)); return []; }
-  return rawEmbed;
+  return d.data[0].embedding;
 }
 
 // ── teazzers-history helpers ────────────────────────────────────────────
 async function saveToHistory(question, answer) {
-  try {
-    const embedding = await getEmbedding(question);
-    const id        = `hist_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const payload = {
-      vectors: {
-        [id]: {
+  const embedding = await getEmbedding(question);
+  const id        = `hist_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const payload    = {
+    vectors: {
+      [id]: {
+        id,
+        values: embedding,
+        metadata: {
           id,
-          values: embedding,
-          metadata: {
-            id,
-            question,
-            answer,
-            timestamp: Date.now(),
-            timestamp_type: 'unix_ms',
-          },
+          question,
+          answer,
+          timestamp: Date.now(),
+          timestamp_type: 'unix_ms',
         },
       },
-    };
-    const bodyText = JSON.stringify(payload);
-    console.log('=== PINECONE UPSERT DEBUG ===');
-    console.log('values.length:', embedding.length);
-    console.log('bodyText.slice(0,200):', bodyText.slice(0, 200));
-    if (bodyText.includes('"values":[]')) console.error('BUG: body contains empty values array!');
-    console.log('=============================');
-    const r = await fetch(HISTORY_UPSERT_URL, {
-      method: 'POST',
-      headers: { 'Api-Key': import.meta.env.VITE_PINECONE_API_KEY, 'Content-Type': 'application/json' },
-      body: bodyText,
-    });
-    if (r.ok) alert('[history] upsert OK — id: ' + id + '  dim: ' + embedding.length + '\n\nRefresh Pinecone console — Record count should now be > 0');
-    else { const t = await r.text(); alert('[history] upsert FAILED: ' + r.status + '\n\n' + t.slice(0, 500) + '\n\nEMBEDDING DIM: ' + embedding.length + '\nCheck DevTools Console for "PINECONE UPSERT DEBUG" lines'); }
-  } catch(e) { alert('[history] saveToHistory error:\n\n' + e.message); }
+    },
+  };
+  const r = await fetch(HISTORY_UPSERT_URL, {
+    method: 'POST',
+    headers: { ...headers(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) console.warn('[history] upsert failed', r.status, await r.text());
 }
 
 async function loadRecentHistory(limit = HISTORY_LIMIT) {
-  try {
-    const embedding = await getEmbedding('recent support history');
-    if (!embedding?.length) { console.warn('[history] loadRecentHistory: empty embedding — skipping query'); return []; }
   const r = await fetch(HISTORY_QUERY_URL, {
     method: 'POST',
     headers: { ...headers(), 'Content-Type': 'application/json' },
