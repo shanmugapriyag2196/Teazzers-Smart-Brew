@@ -12,12 +12,7 @@ const HISTORY_INDEX_URL  = `https://${HISTORY_HOST}`;
 const HISTORY_QUERY_URL  = `${HISTORY_INDEX_URL}/query`;
 const HISTORY_UPSERT_URL = `${HISTORY_INDEX_URL}/vectors/upsert`;
 
-// text-embedding-3-small supports dimensions: 512 | 1024 | 1536
-// teazzers-history index was recreated with dimension 1536 on 2026-05-19.
-// Both sides use 1536 — update here if you ever change the index dimension.
-// WRONG DIMENSIONS = Pinecone 400 / "vector dimension 0 does not match".
-const EMBED_MODEL   = 'text-embedding-3-small';
-const EMBED_DIM     = 1536;             // MUST MATCH teazzers-history index dimension
+const EMBED_MODEL   = 'text-embedding-3-large';
 const EMBED_URL     = 'https://api.openai.com/v1/embeddings';
 const HISTORY_LIMIT = 20;
 
@@ -34,13 +29,6 @@ function headers() {
   };
 }
 
-function historyHeaders() {
-  return {
-    'Api-Key': import.meta.env.VITE_PINECONE_API_KEY,
-    'Content-Type': 'application/json',
-  };
-}
-
 function oaHeaders() {
   return {
     Authorization: `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
@@ -52,90 +40,66 @@ async function getEmbedding(text) {
   const r = await fetch(EMBED_URL, {
     method: 'POST',
     headers: oaHeaders(),
-    body: JSON.stringify({ input: text, model: EMBED_MODEL, dimensions: EMBED_DIM }),
+    body: JSON.stringify({ input: text, model: EMBED_MODEL }),
   });
-  if (!r.ok) { const t = await r.text(); alert('Embedding error ' + r.status + '\n\n' + t.slice(0, 400)); throw new Error('Embedding failed'); }
+  if (!r.ok) throw new Error(`Embedding error ${r.status}`);
   const d = await r.json();
-  const rawEmbed = d?.data?.[0]?.embedding;
-  const vec = Array.isArray(rawEmbed) ? rawEmbed : [];
-  if (!vec.length) alert('getEmbedding: empty or invalid vector from OpenAI\nembedding type: ' + typeof rawEmbed + '\ndata: ' + JSON.stringify(d?.data).slice(0, 300));
-  return vec;
+  return d.data[0].embedding;
 }
 
+// ── teazzers-history helpers ────────────────────────────────────────────
 async function saveToHistory(question, answer) {
-  try {
-    // Call OpenAI ONCE — use the same result for dim check AND pinecone payload
-    const rawEmbed = await (async () => {
-      const r = await fetch(EMBED_URL, {
-        method: 'POST',
-        headers: oaHeaders(),
-        body: JSON.stringify({ input: question, model: EMBED_MODEL, dimensions: EMBED_DIM }),
-      });
-      if (!r.ok) { const t = await r.text(); alert('Embedding API error ' + r.status + '\n\n' + t.slice(0, 400)); return null; }
-      const d = await r.json();
-      const e = d?.data?.[0]?.embedding;
-      if (!Array.isArray(e) || !e.length) { alert('Embedding API: did not return a vector.\ntype=' + typeof e + (e ? ', length=' + e.length : '') + '\ndata=' + JSON.stringify(d?.data).slice(0, 300)); return null; }
-      return e;
-    })();
-
-    if (!rawEmbed) return;
-
-    alert('saveToHistory: embedding dim=' + rawEmbed.length + ' index dim=1536 question="' + question.slice(0, 60) + '"');
-    const id        = `hist_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const payload = {
-      vectors: {
-        [id]: {
+  const embedding = await getEmbedding(question);
+  const id        = `hist_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const payload    = {
+    vectors: {
+      [id]: {
+        id,
+        values: embedding,
+        metadata: {
           id,
-          values: rawEmbed,      // same object from the single successful call
-          metadata: {
-            id,
-            question,
-            answer,
-            timestamp: Date.now(),
-            timestamp_type: 'unix_ms',
-          },
+          question,
+          answer,
+          timestamp: Date.now(),
+          timestamp_type: 'unix_ms',
         },
       },
-    };
-    const bodyText = JSON.stringify(payload);
-    alert('pinecone body values.length=' + rawEmbed.length + '\nbodyText.slice(0, 120)=\n' + bodyText.slice(0, 120) + '...');
-    const r = await fetch(HISTORY_UPSERT_URL, {
-      method: 'POST',
-      headers: historyHeaders(),
-      body: bodyText,
-    });
-    if (r.ok) { alert('[history] upsert OK\n\nRecord saved to teazzers-history\nid: ' + id + '\n\nRefresh Pinecone console — Record count should now be > 0'); }
-    else { const t = await r.text(); alert('[history] upsert FAILED: ' + r.status + '\n\n' + t.slice(0, 500)); }
-  } catch(e) { alert('[history] saveToHistory error:\n\n' + e.message); }
+    },
+  };
+  const r = await fetch(HISTORY_UPSERT_URL, {
+    method: 'POST',
+    headers: { ...headers(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) console.warn('[history] upsert failed', r.status, await r.text());
 }
 
 async function loadRecentHistory(limit = HISTORY_LIMIT) {
-  try {
-    const embedding = await getEmbedding('recent support history');
-    if (!embedding?.length) { alert('[history] loadRecentHistory: empty embedding on mount — Pinecone query SKIPPED.\n\nOpenAI did not return a vector for the sidebar refresh query.\n\nFix: Verify VITE_OPENAI_API_KEY in Vercel Production env vars.\nThis alert fires on EVERY mount until the key is correct.'); return []; }
-    const r = await fetch(HISTORY_QUERY_URL, {
-      method: 'POST',
-      headers: historyHeaders(),
-      body: JSON.stringify({
-        vector:         embedding,
-        topK:           limit,
-        namespace:      HISTORY_NS,
-        includeMetadata: true,
-      }),
-    });
-    if (!r.ok) { console.warn('[history] query failed', r.status); return []; }
-    const data   = await r.json();
-    const vectors = data.matches || [];
-    return vectors.map((m, i) => {
-      const m2  = m.metadata || {};
-      return {
-        id:        m2.id    || m.id    || `hist_${i}`,
-        question:  m2.question || '—',
-        answer:    m2.answer   || '',
-        timestamp: m2.timestamp || 0,
-      };
-    });
-  } catch (e) { console.warn('[history] loadRecentHistory error:', e); return []; }
+  const r = await fetch(HISTORY_QUERY_URL, {
+    method: 'POST',
+    headers: { ...headers(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      vector:         await getEmbedding('recent support history'),
+      topK:           limit,
+      namespace:      HISTORY_NS,
+      includeMetadata: true,
+    }),
+  });
+  if (!r.ok) {
+    console.warn('[history] query failed', r.status);
+    return [];
+  }
+  const data   = await r.json();
+  const vectors = data.matches || [];
+  return vectors.map((m, i) => {
+    const m2  = m.metadata || {};
+    return {
+      id:        m2.id    || m.id    || `hist_${i}`,
+      question:  m2.question || '—',
+      answer:    m2.answer   || '',
+      timestamp: m2.timestamp || 0,
+    };
+  });
 }
 
 // ── Helper: safe error string ───────────────────────────────────────────
@@ -255,10 +219,6 @@ export default function ChatBot({ selectedIssue }) {
     })();
   }, [API_KEY]);
 
-  const messagesRef   = useRef([]);
-
-  useEffect(() => { messagesRef.current = messages; }, [messages]);
-
   // ── Send new question ────────────────────────────────────────────────
   const sendMessage = async (e) => {
     e.preventDefault();
@@ -269,7 +229,6 @@ export default function ChatBot({ selectedIssue }) {
     setIsLoading(true);
     setError(null);
     setMessages(prev => [...prev, userMessage]);
-    messagesRef.current = [...messagesRef.current, userMessage];   // ← keep ref in sync now, not after next render
     setExpanded(prev => ({ ...prev, [prev.length]: false }));
 
     if (!API_KEY) {
@@ -288,8 +247,8 @@ export default function ChatBot({ selectedIssue }) {
           'Content-Type': 'application/json',
           'X-Pinecone-Api-Version': '2025-10',
         },
-      body: JSON.stringify({
-        messages: messagesRef.current.map(m => ({ role: m.role, content: m.content })),
+        body: JSON.stringify({
+          messages: messages.map(m => ({ role: m.role, content: m.content })),
           model: 'gpt-4o',
           stream: false,
         }),
@@ -306,7 +265,7 @@ export default function ChatBot({ selectedIssue }) {
       setMessages(prev => [...prev, { role: 'assistant', content: answer }]);
 
       // Save to teazzers-history in background — don't block UI
-      saveToHistory(userMessage.content, answer).catch(e => alert('[history] save failed:\n\n' + e.message));
+      saveToHistory(userMessage.content, answer).catch(e => console.warn('[history] save failed', e));
       // Refresh history sidebar
       loadRecentHistory().then(setRecentHistory).catch(() => {});
     } catch (err) {
