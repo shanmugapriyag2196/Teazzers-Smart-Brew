@@ -46,23 +46,16 @@ function oaHeaders() {
 async function getEmbedding(text) {
   const url  = EMBED_URL;
   const body = JSON.stringify({ input: text, model: EMBED_MODEL });
-  console.log('[history] embedding request →', url, body.slice(0, 80));
   const r = await fetch(url, { method: 'POST', headers: oaHeaders(), body });
-  console.log('[history] embedding status:', r.status);
-  if (!r.ok) { const t = await r.text(); console.warn('[history] embedding failed', r.status, t.slice(0, 200)); throw new Error(`Embedding ${r.status}`); }
+  if (!r.ok) { const t = await r.text(); throw new Error(`Embedding ${r.status}: ${t.slice(0,100)}`); }
   const d = await r.json();
-  console.log('[history] embedding response keys:', Object.keys(d));
-  const vec = (d?.data?.[0]?.embedding) || [];
-  console.log('[history] embedding dim:', vec.length);
-  return vec;
+  return (d?.data?.[0]?.embedding) || [];
 }
 
-// ── teazzers-history helpers ────────────────────────────────────────────
 async function saveToHistory(question, answer) {
   try {
-    console.log('[history] saveToHistory called —', question, '|', answer.slice(0,60), '...');
     const embedding = await getEmbedding(question);
-    if (!embedding.length) { console.warn('[history] saveToHistory: empty embedding — skipping upsert'); return; }
+    if (!embedding.length) { alert('[history] saveToHistory: empty embedding — check VITE_OPENAI_API_KEY in Vercel\n\nThis means OpenAI returned no vector data. Check:\n1. VITE_OPENAI_API_KEY is set in Vercel Production env vars\n2. The key has embeddings:read permission\n3. The model text-embedding-3-large is accessible for your key'); return; }
     const id        = `hist_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const payload    = {
       vectors: {
@@ -84,10 +77,9 @@ async function saveToHistory(question, answer) {
       headers: historyHeaders(),
       body: JSON.stringify(payload),
     });
-    console.log('[history] upsert status:', r.status, 'id:', id);
-    if (!r.ok) { const t = await r.text(); console.warn('[history] upsert failed', r.status, t.slice(0, 300)); }
-    else { console.log('[history] upsert OK, id:', id); }
-  } catch(e) { console.warn('[history] saveToHistory error:', e); }
+    if (r.ok) { alert('[history] upsert OK\n\nRecord saved to teazzers-history with id:\n' + id + '\n\nRefresh the Pinecone console — the record count should now be > 0'); }
+    else { const t = await r.text(); alert('[history] upsert FAILED: ' + r.status + '\n\n' + t.slice(0, 500)); }
+  } catch(e) { alert('[history] saveToHistory error:\n\n' + e.message); }
 }
 
 async function loadRecentHistory(limit = HISTORY_LIMIT) {
@@ -104,11 +96,9 @@ async function loadRecentHistory(limit = HISTORY_LIMIT) {
         includeMetadata: true,
       }),
     });
-    console.log('[history] query status:', r.status);
     if (!r.ok) { console.warn('[history] query failed', r.status); return []; }
     const data   = await r.json();
     const vectors = data.matches || [];
-    console.log('[history] query returned', vectors.length, 'matches');
     return vectors.map((m, i) => {
       const m2  = m.metadata || {};
       return {
