@@ -13,11 +13,11 @@ const HISTORY_QUERY_URL  = `${HISTORY_INDEX_URL}/query`;
 const HISTORY_UPSERT_URL = `${HISTORY_INDEX_URL}/vectors/upsert`;
 
 // text-embedding-3-small supports dimensions: 512 | 1024 | 1536
-// The Pinecone index dimension 512 requires dimensions: 512 here.
-// SENDING WRONG DIMENSIONS CAUSES: "vector dimension 0 does not match the dimension of the index 512"
-// text-embedding-3-small default is 1536 — MUST pass dimensions: 512 to match index.
+// teazzers-history index was recreated with dimension 1536 on 2026-05-19.
+// Both sides use 1536 — update here if you ever change the index dimension.
+// WRONG DIMENSIONS = Pinecone 400 / "vector dimension 0 does not match".
 const EMBED_MODEL   = 'text-embedding-3-small';
-const EMBED_DIM     = 512;              // MUST MATCH your Pinecone index dimension
+const EMBED_DIM     = 1536;             // MUST MATCH teazzers-history index dimension
 const EMBED_URL     = 'https://api.openai.com/v1/embeddings';
 const HISTORY_LIMIT = 20;
 
@@ -64,15 +64,34 @@ async function getEmbedding(text) {
 
 async function saveToHistory(question, answer) {
   try {
-    const embedding = await getEmbedding(question);
-    const dim = (embedding && embedding.length) || 0;
-    if (!dim) { 
-      const emptyAlertMsg = `[history] saveToHistory: EMPTY EMBEDDING (dimension ${dim})\n\nPinecone will reject this with status 400: "vector dimension 0 does not match the dimension of the index"\n\nCAUSE: OpenAI did not return a vector.\n\nCHECKLIST:\n1. Go to Vercel → Teazzers-Smart-Brew → Settings → Environment Variables\n2. Verify VITE_OPENAI_API_KEY is set for Production (NOT just Development)\n3. Copy the key and verify it at https://platform.openai.com/api-keys\n4. If the key is incorrect, expired, or blocklisted, generate a new one and redeploy\n\nDevTools Console (F12) → paste [history] here to see OpenAI raw response:`;
-      alert(emptyAlertMsg);
-      return; 
-    }
+    const dim = await (async () => {
+      const r = await fetch(EMBED_URL, {
+        method: 'POST',
+        headers: oaHeaders(),
+        body: JSON.stringify({ input: question, model: EMBED_MODEL, dimensions: EMBED_DIM }),
+      });
+      if (!r.ok) { const t = await r.text(); alert('Embedding API error ' + r.status + '\n\n' + t.slice(0, 400)); return 0; }
+      const d = await r.json();
+      const rawEmbed = d?.data?.[0]?.embedding;
+      if (!Array.isArray(rawEmbed)) { alert('Embedding API: did not return a vector.\ntype=' + typeof rawEmbed + '\ndata=' + JSON.stringify(d?.data).slice(0, 300)); return 0; }
+      return rawEmbed.length;
+    })();
+
+    if (!dim) { alert('saveToHistory: embedding dimension is ' + dim + '\n\nPinecone index teazzers-history has DIMENSION 1536.\nOpenAI returned ' + dim + '-dim vector for question: "' + question + '"\n\nFix VITE_OPENAI_API_KEY in Vercel Production env vars.'); return; }
+
     const id        = `hist_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const payload    = {
+    const embedding = await (async () => {
+      const r = await fetch(EMBED_URL, {
+        method: 'POST',
+        headers: oaHeaders(),
+        body: JSON.stringify({ input: question, model: EMBED_MODEL, dimensions: EMBED_DIM }),
+      });
+      if (!r.ok) { const t = await r.text(); alert('Embedding API error ' + r.status + '\n\n' + t.slice(0, 400)); return []; }
+      const d = await r.json();
+      return (d?.data?.[0]?.embedding) || [];
+    })();
+
+    const payload = {
       vectors: {
         [id]: {
           id,
@@ -92,7 +111,7 @@ async function saveToHistory(question, answer) {
       headers: historyHeaders(),
       body: JSON.stringify(payload),
     });
-    if (r.ok) { alert('[history] upsert OK\n\nRecord saved to teazzers-history with id:\n' + id + '\n\nRefresh the Pinecone console — the record count should now be > 0'); }
+    if (r.ok) { alert('[history] upsert OK\n\nRecord saved to teazzers-history\nid: ' + id + '\n\nRefresh Pinecone console — Record count should now be > 0'); }
     else { const t = await r.text(); alert('[history] upsert FAILED: ' + r.status + '\n\n' + t.slice(0, 500)); }
   } catch(e) { alert('[history] saveToHistory error:\n\n' + e.message); }
 }
@@ -100,7 +119,7 @@ async function saveToHistory(question, answer) {
 async function loadRecentHistory(limit = HISTORY_LIMIT) {
   try {
     const embedding = await getEmbedding('recent support history');
-    if (!embedding?.length) { console.warn('[history] loadRecentHistory: empty embedding — skipping query'); return []; }
+    if (!embedding?.length) { alert('[history] loadRecentHistory: empty embedding on mount — Pinecone query SKIPPED.\n\nOpenAI did not return a vector for the sidebar refresh query.\n\nFix: Verify VITE_OPENAI_API_KEY in Vercel Production env vars.\nThis alert fires on EVERY mount until the key is correct.'); return []; }
     const r = await fetch(HISTORY_QUERY_URL, {
       method: 'POST',
       headers: historyHeaders(),
