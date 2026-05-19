@@ -44,62 +44,66 @@ async function getEmbedding(text) {
   });
   if (!r.ok) throw new Error(`Embedding error ${r.status}`);
   const d = await r.json();
-  return d.data[0].embedding;
+  return (d?.data?.[0]?.embedding) || [];
 }
 
 // ── teazzers-history helpers ────────────────────────────────────────────
 async function saveToHistory(question, answer) {
-  const embedding = await getEmbedding(question);
-  const id        = `hist_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-  const payload    = {
-    vectors: {
-      [id]: {
-        id,
-        values: embedding,
-        metadata: {
+  try {
+    const embedding = await getEmbedding(question);
+    const id        = `hist_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const payload    = {
+      vectors: {
+        [id]: {
           id,
-          question,
-          answer,
-          timestamp: Date.now(),
-          timestamp_type: 'unix_ms',
+          values: embedding,
+          metadata: {
+            id,
+            question,
+            answer,
+            timestamp: Date.now(),
+            timestamp_type: 'unix_ms',
+          },
         },
       },
-    },
-  };
-  const r = await fetch(HISTORY_UPSERT_URL, {
-    method: 'POST',
-    headers: { ...headers(), 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!r.ok) console.warn('[history] upsert failed', r.status, await r.text());
+    };
+    const r = await fetch(HISTORY_UPSERT_URL, {
+      method: 'POST',
+      headers: { 'Api-Key': import.meta.env.VITE_PINECONE_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) console.warn('[history] upsert failed', r.status, await r.text());
+  } catch(e) { console.warn('[history] save error', e); }
 }
 
 async function loadRecentHistory(limit = HISTORY_LIMIT) {
-  const r = await fetch(HISTORY_QUERY_URL, {
-    method: 'POST',
-    headers: { ...headers(), 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      vector:         await getEmbedding('recent support history'),
-      topK:           limit,
-      namespace:      HISTORY_NS,
-      includeMetadata: true,
-    }),
-  });
-  if (!r.ok) {
-    console.warn('[history] query failed', r.status);
-    return [];
-  }
-  const data   = await r.json();
-  const vectors = data.matches || [];
-  return vectors.map((m, i) => {
-    const m2  = m.metadata || {};
-    return {
-      id:        m2.id    || m.id    || `hist_${i}`,
-      question:  m2.question || '—',
-      answer:    m2.answer   || '',
-      timestamp: m2.timestamp || 0,
-    };
-  });
+  try {
+    const r = await fetch(HISTORY_QUERY_URL, {
+      method: 'POST',
+      headers: { 'Api-Key': import.meta.env.VITE_PINECONE_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        vector:         await getEmbedding('recent support history'),
+        topK:           limit,
+        namespace:      HISTORY_NS,
+        includeMetadata: true,
+      }),
+    });
+    if (!r.ok) {
+      console.warn('[history] query failed', r.status);
+      return [];
+    }
+    const data   = await r.json();
+    const vectors = data.matches || [];
+    return vectors.map((m, i) => {
+      const m2  = m.metadata || {};
+      return {
+        id:        m2.id    || m.id    || `hist_${i}`,
+        question:  m2.question || '—',
+        answer:    m2.answer   || '',
+        timestamp: m2.timestamp || 0,
+      };
+    });
+  } catch (e) { console.warn('[history] load error', e); return []; }
 }
 
 // ── Helper: safe error string ───────────────────────────────────────────
