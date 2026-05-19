@@ -29,6 +29,13 @@ function headers() {
   };
 }
 
+function historyHeaders() {
+  return {
+    'Api-Key': import.meta.env.VITE_PINECONE_API_KEY,
+    'Content-Type': 'application/json',
+  };
+}
+
 function oaHeaders() {
   return {
     Authorization: `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
@@ -37,20 +44,25 @@ function oaHeaders() {
 }
 
 async function getEmbedding(text) {
-  const r = await fetch(EMBED_URL, {
-    method: 'POST',
-    headers: oaHeaders(),
-    body: JSON.stringify({ input: text, model: EMBED_MODEL }),
-  });
-  if (!r.ok) throw new Error(`Embedding error ${r.status}`);
+  const url  = EMBED_URL;
+  const body = JSON.stringify({ input: text, model: EMBED_MODEL });
+  console.log('[history] embedding request →', url, body.slice(0, 80));
+  const r = await fetch(url, { method: 'POST', headers: oaHeaders(), body });
+  console.log('[history] embedding status:', r.status);
+  if (!r.ok) { const t = await r.text(); console.warn('[history] embedding failed', r.status, t.slice(0, 200)); throw new Error(`Embedding ${r.status}`); }
   const d = await r.json();
-  return (d?.data?.[0]?.embedding) || [];
+  console.log('[history] embedding response keys:', Object.keys(d));
+  const vec = (d?.data?.[0]?.embedding) || [];
+  console.log('[history] embedding dim:', vec.length);
+  return vec;
 }
 
 // ── teazzers-history helpers ────────────────────────────────────────────
 async function saveToHistory(question, answer) {
   try {
+    console.log('[history] saveToHistory called —', question, '|', answer.slice(0,60), '...');
     const embedding = await getEmbedding(question);
+    if (!embedding.length) { console.warn('[history] saveToHistory: empty embedding — skipping upsert'); return; }
     const id        = `hist_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const payload    = {
       vectors: {
@@ -69,31 +81,34 @@ async function saveToHistory(question, answer) {
     };
     const r = await fetch(HISTORY_UPSERT_URL, {
       method: 'POST',
-      headers: { 'Api-Key': import.meta.env.VITE_PINECONE_API_KEY, 'Content-Type': 'application/json' },
+      headers: historyHeaders(),
       body: JSON.stringify(payload),
     });
-    if (!r.ok) console.warn('[history] upsert failed', r.status, await r.text());
-  } catch(e) { console.warn('[history] save error', e); }
+    console.log('[history] upsert status:', r.status, 'id:', id);
+    if (!r.ok) { const t = await r.text(); console.warn('[history] upsert failed', r.status, t.slice(0, 300)); }
+    else { console.log('[history] upsert OK, id:', id); }
+  } catch(e) { console.warn('[history] saveToHistory error:', e); }
 }
 
 async function loadRecentHistory(limit = HISTORY_LIMIT) {
   try {
+    const embedding = await getEmbedding('recent support history');
+    if (!embedding.length) { console.warn('[history] loadRecentHistory: empty embedding'); return []; }
     const r = await fetch(HISTORY_QUERY_URL, {
       method: 'POST',
-      headers: { 'Api-Key': import.meta.env.VITE_PINECONE_API_KEY, 'Content-Type': 'application/json' },
+      headers: historyHeaders(),
       body: JSON.stringify({
-        vector:         await getEmbedding('recent support history'),
+        vector:         embedding,
         topK:           limit,
         namespace:      HISTORY_NS,
         includeMetadata: true,
       }),
     });
-    if (!r.ok) {
-      console.warn('[history] query failed', r.status);
-      return [];
-    }
+    console.log('[history] query status:', r.status);
+    if (!r.ok) { console.warn('[history] query failed', r.status); return []; }
     const data   = await r.json();
     const vectors = data.matches || [];
+    console.log('[history] query returned', vectors.length, 'matches');
     return vectors.map((m, i) => {
       const m2  = m.metadata || {};
       return {
@@ -103,7 +118,7 @@ async function loadRecentHistory(limit = HISTORY_LIMIT) {
         timestamp: m2.timestamp || 0,
       };
     });
-  } catch (e) { console.warn('[history] load error', e); return []; }
+  } catch (e) { console.warn('[history] loadRecentHistory error:', e); return []; }
 }
 
 // ── Helper: safe error string ───────────────────────────────────────────
