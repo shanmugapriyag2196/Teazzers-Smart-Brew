@@ -64,42 +64,29 @@ async function getEmbedding(text) {
 
 async function saveToHistory(question, answer) {
   try {
-    const dim = await (async () => {
+    // Call OpenAI ONCE — use the same result for dim check AND pinecone payload
+    const rawEmbed = await (async () => {
       const r = await fetch(EMBED_URL, {
         method: 'POST',
         headers: oaHeaders(),
         body: JSON.stringify({ input: question, model: EMBED_MODEL, dimensions: EMBED_DIM }),
       });
-      if (!r.ok) { const t = await r.text(); alert('Embedding API error ' + r.status + '\n\n' + t.slice(0, 400)); return 0; }
+      if (!r.ok) { const t = await r.text(); alert('Embedding API error ' + r.status + '\n\n' + t.slice(0, 400)); return null; }
       const d = await r.json();
-      const rawEmbed = d?.data?.[0]?.embedding;
-      if (!Array.isArray(rawEmbed)) { alert('Embedding API: did not return a vector.\ntype=' + typeof rawEmbed + '\ndata=' + JSON.stringify(d?.data).slice(0, 300)); return 0; }
-      return rawEmbed.length;
+      const e = d?.data?.[0]?.embedding;
+      if (!Array.isArray(e) || !e.length) { alert('Embedding API: did not return a vector.\ntype=' + typeof e + (e ? ', length=' + e.length : '') + '\ndata=' + JSON.stringify(d?.data).slice(0, 300)); return null; }
+      return e;
     })();
 
-    if (!dim) { alert('saveToHistory: embedding dimension is ' + dim + '\n\nPinecone index teazzers-history has DIMENSION 1536.\nOpenAI returned ' + dim + '-dim vector for question: "' + question + '"\n\nFix VITE_OPENAI_API_KEY in Vercel Production env vars.'); return; }
+    if (!rawEmbed) return;
 
+    alert('saveToHistory: embedding dim=' + rawEmbed.length + ' index dim=1536 question="' + question.slice(0, 60) + '"');
     const id        = `hist_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const embedding = await (async () => {
-      const r = await fetch(EMBED_URL, {
-        method: 'POST',
-        headers: oaHeaders(),
-        body: JSON.stringify({ input: question, model: EMBED_MODEL, dimensions: EMBED_DIM }),
-      });
-      if (!r.ok) { const t = await r.text(); alert('Embedding API error ' + r.status + '\n\n' + t.slice(0, 400)); return []; }
-      const d = await r.json();
-      const rawEmbed = d?.data?.[0]?.embedding;
-      if (!Array.isArray(rawEmbed)) { alert('Embedding API 2: did not return a vector.\ntype=' + typeof rawEmbed + '\nlength=' + (rawEmbed ? rawEmbed.length : 'N/A') + '\ndata=' + JSON.stringify(d?.data).slice(0, 300)); return []; }
-      alert('Embedding API 2: returned ' + rawEmbed.length + '-dim vector');
-      return rawEmbed;
-    })();
-
-    alert('saveToHistory::About to call Pinecone upsert\nembedding dim: ' + embedding.length + '\nindex dim: 1536\nquestion: "' + question + '"');
     const payload = {
       vectors: {
         [id]: {
           id,
-          values: embedding,
+          values: rawEmbed,      // same object from the single successful call
           metadata: {
             id,
             question,
