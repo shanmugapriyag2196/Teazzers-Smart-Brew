@@ -97,10 +97,12 @@ async function saveToHistory(question, answer) {
         },
       },
     };
+    const bodyText = JSON.stringify(payload);
+    alert('pinecone body values.length=' + rawEmbed.length + '\nbodyText.slice(0, 120)=\n' + bodyText.slice(0, 120) + '...');
     const r = await fetch(HISTORY_UPSERT_URL, {
       method: 'POST',
       headers: historyHeaders(),
-      body: JSON.stringify(payload),
+      body: bodyText,
     });
     if (r.ok) { alert('[history] upsert OK\n\nRecord saved to teazzers-history\nid: ' + id + '\n\nRefresh Pinecone console — Record count should now be > 0'); }
     else { const t = await r.text(); alert('[history] upsert FAILED: ' + r.status + '\n\n' + t.slice(0, 500)); }
