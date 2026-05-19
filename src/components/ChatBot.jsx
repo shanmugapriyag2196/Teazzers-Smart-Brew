@@ -44,18 +44,27 @@ function oaHeaders() {
 }
 
 async function getEmbedding(text) {
-  const url  = EMBED_URL;
-  const body = JSON.stringify({ input: text, model: EMBED_MODEL });
-  const r = await fetch(url, { method: 'POST', headers: oaHeaders(), body });
-  if (!r.ok) { const t = await r.text(); throw new Error(`Embedding ${r.status}: ${t.slice(0,100)}`); }
+  const r = await fetch(EMBED_URL, {
+    method: 'POST',
+    headers: oaHeaders(),
+    body: JSON.stringify({ input: text, model: EMBED_MODEL }),
+  });
+  if (!r.ok) { const t = await r.text(); throw new Error(`Embedding 400 from OpenAI\n\nStatus: ${r.status}\n${t.slice(0, 300)}\n\nThis usually means:\n- VITE_OPENAI_API_KEY is missing/wrong in Vercel\n- Key has no embedding access\n- text-embedding-3-small is blocked for this key`); }
   const d = await r.json();
-  return (d?.data?.[0]?.embedding) || [];
+  const vec = (d?.data?.[0]?.embedding) || [];
+  if (!Array.isArray(vec) || !vec.length) console.error('[history] getEmbedding got non-array or empty embedding:', d);
+  returnvec;
 }
 
 async function saveToHistory(question, answer) {
   try {
     const embedding = await getEmbedding(question);
-    if (!embedding.length) { alert('[history] saveToHistory: empty embedding — check VITE_OPENAI_API_KEY in Vercel\n\nThis means OpenAI returned no vector data. Check:\n1. VITE_OPENAI_API_KEY is set in Vercel Production env vars\n2. The key has embeddings:read scope\n3. The model text-embedding-3-small produces 1536-dim vectors — see .env.example for Pinecone index dimension fix'); return; }
+    const dim = (embedding && embedding.length) || 0;
+    if (!dim) { 
+      const emptyAlertMsg = `[history] saveToHistory: EMPTY EMBEDDING (dimension ${dim})\n\nPinecone will reject this with status 400: "vector dimension 0 does not match the dimension of the index"\n\nCAUSE: OpenAI did not return a vector.\n\nCHECKLIST:\n1. Go to Vercel → Teazzers-Smart-Brew → Settings → Environment Variables\n2. Verify VITE_OPENAI_API_KEY is set for Production (NOT just Development)\n3. Copy the key and verify it at https://platform.openai.com/api-keys\n4. If the key is incorrect, expired, or blocklisted, generate a new one and redeploy\n\nDevTools Console (F12) → paste [history] here to see OpenAI raw response:`;
+      alert(emptyAlertMsg);
+      return; 
+    }
     const id        = `hist_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const payload    = {
       vectors: {
@@ -279,7 +288,7 @@ export default function ChatBot({ selectedIssue }) {
       setMessages(prev => [...prev, { role: 'assistant', content: answer }]);
 
       // Save to teazzers-history in background — don't block UI
-      saveToHistory(userMessage.content, answer).catch(e => console.warn('[history] save failed', e));
+      saveToHistory(userMessage.content, answer).catch(e => alert('[history] save failed:\n\n' + e.message));
       // Refresh history sidebar
       loadRecentHistory().then(setRecentHistory).catch(() => {});
     } catch (err) {
