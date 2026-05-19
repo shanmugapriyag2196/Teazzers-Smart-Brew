@@ -12,7 +12,11 @@ const HISTORY_INDEX_URL  = `https://${HISTORY_HOST}`;
 const HISTORY_QUERY_URL  = `${HISTORY_INDEX_URL}/query`;
 const HISTORY_UPSERT_URL = `${HISTORY_INDEX_URL}/vectors/upsert`;
 
-const EMBED_MODEL   = 'text-embedding-3-small';
+// text-embedding-3-large supports dimensions: 512 | 1024 | 1536 | 3072
+// The Pinecone index dimension 512 requires dimensions: 512 here.
+// SETTING WRONG DIMENSIONS HERE CAUSES status 400 / "vector dimension 0 does not match" ON EVERY UPSERT.
+const EMBED_MODEL   = 'text-embedding-3-large';
+const EMBED_DIM     = 512;              // ← MUST MATCH your Pinecone index dimension
 const EMBED_URL     = 'https://api.openai.com/v1/embeddings';
 const HISTORY_LIMIT = 20;
 
@@ -47,12 +51,12 @@ async function getEmbedding(text) {
   const r = await fetch(EMBED_URL, {
     method: 'POST',
     headers: oaHeaders(),
-    body: JSON.stringify({ input: text, model: EMBED_MODEL }),
+    body: JSON.stringify({ input: text, model: EMBED_MODEL, dimensions: EMBED_DIM }),
   });
-  if (!r.ok) { const t = await r.text(); throw new Error(`Embedding 400 from OpenAI\n\nStatus: ${r.status}\n${t.slice(0, 300)}\n\nThis usually means:\n- VITE_OPENAI_API_KEY is missing/wrong in Vercel\n- Key has no embedding access\n- text-embedding-3-small is blocked for this key`); }
+  if (!r.ok) { const t = await r.text(); alert('Embedding error ' + r.status + '\n\n' + t.slice(0, 400)); throw new Error('Embedding failed'); }
   const d = await r.json();
   const vec = (d?.data?.[0]?.embedding) || [];
-  if (!Array.isArray(vec) || !vec.length) console.error('[history] getEmbedding got non-array or empty embedding:', d);
+  if (!vec.length) alert('getEmbedding: empty vector returned by OpenAI\ndata: ' + JSON.stringify(d?.data).slice(0, 300));
   return vec;
 }
 
