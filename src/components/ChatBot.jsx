@@ -233,6 +233,7 @@ export default function ChatBot({ selectedIssue }) {
     setIsLoading(true);
     setError(null);
     setMessages(prev => [...prev, userMessage]);
+    messagesRef.current = [...messagesRef.current, userMessage];   // ← keep ref in sync now, not after next render
     setExpanded(prev => ({ ...prev, [prev.length]: false }));
 
     if (!API_KEY) {
