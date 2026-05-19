@@ -12,11 +12,12 @@ const HISTORY_INDEX_URL  = `https://${HISTORY_HOST}`;
 const HISTORY_QUERY_URL  = `${HISTORY_INDEX_URL}/query`;
 const HISTORY_UPSERT_URL = `${HISTORY_INDEX_URL}/vectors/upsert`;
 
-// text-embedding-3-large supports dimensions: 512 | 1024 | 1536 | 3072
+// text-embedding-3-small supports dimensions: 512 | 1024 | 1536
 // The Pinecone index dimension 512 requires dimensions: 512 here.
-// SETTING WRONG DIMENSIONS HERE CAUSES status 400 / "vector dimension 0 does not match" ON EVERY UPSERT.
-const EMBED_MODEL   = 'text-embedding-3-large';
-const EMBED_DIM     = 512;              // ← MUST MATCH your Pinecone index dimension
+// SENDING WRONG DIMENSIONS CAUSES: "vector dimension 0 does not match the dimension of the index 512"
+// text-embedding-3-small default is 1536 — MUST pass dimensions: 512 to match index.
+const EMBED_MODEL   = 'text-embedding-3-small';
+const EMBED_DIM     = 512;              // MUST MATCH your Pinecone index dimension
 const EMBED_URL     = 'https://api.openai.com/v1/embeddings';
 const HISTORY_LIMIT = 20;
 
