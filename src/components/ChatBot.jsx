@@ -174,6 +174,14 @@ export default function ChatBot({ selectedIssue }) {
     let cancelled = false;
     (async () => {
       setLoadingHistory(true);
+      // Log current index record count on mount
+      try {
+        const descR = await fetch(HISTORY_INDEX_URL + '/describe_index_stats', {
+          method: 'POST',
+          headers: historyHeaders(),
+        });
+        if (descR.ok) { const dd = await descR.json(); console.log('[history] describe_index_stats on mount:', JSON.stringify(dd)); }
+      } catch { /* best-effort */ }
       try {
         const list = await loadRecentHistory();
         if (!cancelled) setRecentHistory(list);
