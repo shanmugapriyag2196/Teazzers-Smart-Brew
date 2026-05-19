@@ -88,9 +88,13 @@ async function saveToHistory(question, answer) {
       });
       if (!r.ok) { const t = await r.text(); alert('Embedding API error ' + r.status + '\n\n' + t.slice(0, 400)); return []; }
       const d = await r.json();
-      return (d?.data?.[0]?.embedding) || [];
+      const rawEmbed = d?.data?.[0]?.embedding;
+      if (!Array.isArray(rawEmbed)) { alert('Embedding API 2: did not return a vector.\ntype=' + typeof rawEmbed + '\nlength=' + (rawEmbed ? rawEmbed.length : 'N/A') + '\ndata=' + JSON.stringify(d?.data).slice(0, 300)); return []; }
+      alert('Embedding API 2: returned ' + rawEmbed.length + '-dim vector');
+      return rawEmbed;
     })();
 
+    alert('saveToHistory::About to call Pinecone upsert\nembedding dim: ' + embedding.length + '\nindex dim: 1536\nquestion: "' + question + '"');
     const payload = {
       vectors: {
         [id]: {
