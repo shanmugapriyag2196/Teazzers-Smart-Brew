@@ -56,8 +56,9 @@ async function getEmbedding(text) {
   });
   if (!r.ok) { const t = await r.text(); alert('Embedding error ' + r.status + '\n\n' + t.slice(0, 400)); throw new Error('Embedding failed'); }
   const d = await r.json();
-  const vec = (d?.data?.[0]?.embedding) || [];
-  if (!vec.length) alert('getEmbedding: empty vector returned by OpenAI\ndata: ' + JSON.stringify(d?.data).slice(0, 300));
+  const rawEmbed = d?.data?.[0]?.embedding;
+  const vec = Array.isArray(rawEmbed) ? rawEmbed : [];
+  if (!vec.length) alert('getEmbedding: empty or invalid vector from OpenAI\nembedding type: ' + typeof rawEmbed + '\ndata: ' + JSON.stringify(d?.data).slice(0, 300));
   return vec;
 }
 
