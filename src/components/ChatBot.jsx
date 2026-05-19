@@ -219,6 +219,10 @@ export default function ChatBot({ selectedIssue }) {
     })();
   }, [API_KEY]);
 
+  const messagesRef   = useRef([]);
+
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+
   // ── Send new question ────────────────────────────────────────────────
   const sendMessage = async (e) => {
     e.preventDefault();
@@ -247,8 +251,8 @@ export default function ChatBot({ selectedIssue }) {
           'Content-Type': 'application/json',
           'X-Pinecone-Api-Version': '2025-10',
         },
-        body: JSON.stringify({
-          messages: messages.map(m => ({ role: m.role, content: m.content })),
+      body: JSON.stringify({
+        messages: messagesRef.current.map(m => ({ role: m.role, content: m.content })),
           model: 'gpt-4o',
           stream: false,
         }),
