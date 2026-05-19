@@ -53,7 +53,7 @@ async function getEmbedding(text) {
   const d = await r.json();
   const vec = (d?.data?.[0]?.embedding) || [];
   if (!Array.isArray(vec) || !vec.length) console.error('[history] getEmbedding got non-array or empty embedding:', d);
-  returnvec;
+  return vec;
 }
 
 async function saveToHistory(question, answer) {
