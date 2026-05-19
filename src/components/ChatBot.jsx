@@ -99,7 +99,7 @@ async function saveToHistory(question, answer) {
 async function loadRecentHistory(limit = HISTORY_LIMIT) {
   try {
     const embedding = await getEmbedding('recent support history');
-    if (!embedding.length) { console.warn('[history] loadRecentHistory: empty embedding'); return []; }
+    if (!embedding?.length) { console.warn('[history] loadRecentHistory: empty embedding — skipping query'); return []; }
     const r = await fetch(HISTORY_QUERY_URL, {
       method: 'POST',
       headers: historyHeaders(),
