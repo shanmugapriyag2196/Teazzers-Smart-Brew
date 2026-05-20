@@ -57,8 +57,9 @@ async function saveToHistory(question, answer) {
     const vecId  = `hist_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const tsMs   = Date.now();
     const dateStr = new Date(tsMs).toISOString();
-    const payload = {
-      vectors: [
+  const payload = {
+    namespace: HISTORY_NS,
+    vectors: [
         {
           id:         vecId,
           values:     embedding,
@@ -93,31 +94,57 @@ async function saveToHistory(question, answer) {
 }
 
 async function loadRecentHistory(limit = HISTORY_LIMIT) {
-  const r = await fetch(HISTORY_QUERY_URL, {
-    method: 'POST',
-    headers: { ...headers(), 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      vector:         await getEmbedding('recent support history'),
-      topK:           limit,
-      namespace:      HISTORY_NS,
-      includeMetadata: true,
-    }),
-  });
-  if (!r.ok) {
-    console.warn('[history] query failed', r.status);
+  try {
+    const qVec = await getEmbedding('recent support history');
+    if (!qVec.length) { console.warn('[history] query embedding: empty vector — query SKIPPED'); return []; }
+
+    const r = await fetch(HISTORY_QUERY_URL, {
+      method: 'POST',
+      headers: { ...headers(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        vector:         qVec,
+        topK:           limit,
+        namespace:      HISTORY_NS,
+        includeMetadata: true,
+        includeValues:   false,
+      }),
+    });
+
+    if (!r.ok) {
+      const t = await r.text();
+      console.error(`[history] query HTTP ${r.status}:`, t.slice(0, 500));
+      return [];
+    }
+
+    const data     = await r.json();
+    const matches  = data.matches || [];
+    console.log('[history] query OK — matches=', matches.length, 'topK=', limit);
+
+    if (!matches.length) {
+      console.warn('[history] query returned 0 matches. Possible cause: all stored vectors are below the minimum score cut-off, or the index does not use cosine metric.');
+      return [];
+    }
+
+    // Log first match: score + metadata shape so we can spot id/name mismatches
+    const first = matches[0];
+    console.log('[history] first-match score=', first.score,
+                'id=', first.id,
+                'metadataKeys=', Object.keys(first.metadata || {}),
+                'sampleMetadata=', JSON.stringify(first.metadata).slice(0, 200));
+
+    return matches.map((m, i) => {
+      const md  = m.metadata || {};
+      // accept every key we might have written: id / vecId / question / question_text / answer / answer_text / timestamp
+      const id   = md.id || md.vecId || m.id || `hist_${i}`;
+      const q    = md.question     || md.question_text  || '—';
+      const a    = md.answer       || md.answer_text    || '';
+      const ts   = md.timestamp    || md.ts             || 0;
+      return { id, question: q, answer: a, timestamp: ts };
+    });
+  } catch (e) {
+    console.error('[history] loadRecentHistory error:', e);
     return [];
   }
-  const data   = await r.json();
-  const vectors = data.matches || [];
-  return vectors.map((m, i) => {
-    const m2  = m.metadata || {};
-    return {
-      id:        m2.id    || m.id    || `hist_${i}`,
-      question:  m2.question || '—',
-      answer:    m2.answer   || '',
-      timestamp: m2.timestamp || 0,
-    };
-  });
 }
 
 // ── Helper: safe error string ───────────────────────────────────────────
