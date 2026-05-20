@@ -57,11 +57,6 @@
   border-bottom: 2px solid #7c3aed;
 }
 
-.ic-table thead th:first-child {
-  width: 55px;
-  text-align: center;
-}
-
 .ic-table tbody tr {
   transition: background 0.15s;
 }
@@ -80,14 +75,6 @@
 
 .ic-table tbody tr:last-child td {
   border-bottom: none;
-}
-
-.ic-table tbody code {
-  background: #f1f5f9;
-  padding: 2px 7px;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  color: #6366f1;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════

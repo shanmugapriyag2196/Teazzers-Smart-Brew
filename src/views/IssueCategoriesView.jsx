@@ -72,7 +72,6 @@ export default function IssueCategoriesView() {
           <table className="ic-table">
             <thead>
               <tr>
-                <th width="55">#</th>
                 <th>Category</th>
                 <th>Question</th>
                 <th width="160">Answered On</th>
@@ -84,7 +83,6 @@ export default function IssueCategoriesView() {
                 const catCls = CAT_CLASS[cat] || 'cat-other';
                 return (
                   <tr key={item.id || i}>
-                    <td style={{ color: '#94a3b8', textAlign: 'center' }}>{i + 1}</td>
                     <td><span className={`ic-cat-pill ${catCls}`}>{cat}</span></td>
                     <td style={{ fontWeight: 500 }}>{item.question}</td>
                     <td style={{ color: '#64748b', fontSize: '0.82rem' }}>{fmtDate(item.timestamp)}</td>
