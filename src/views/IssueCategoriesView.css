@@ -1,139 +1,140 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   IssueCategoriesView — live teazzers-history questions list
+   IssueCategoriesView — card grid, 6 category boxes
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* page header spans full content width — bg shows on both sides */
-.issue-view .page-header {
-  padding: 28px 0 0;
+.icv { padding: 28px 32px 32px; }
+
+.icv-header { margin-bottom: 24px; }
+
+.icv-header h2 {
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0 0 4px;
 }
 
-/* ── Full-width table container — no white card, page bg visible ─────── */
+.icv-header p {
+  font-size: 0.88rem;
+  color: #64748b;
+  margin: 0;
+}
 
-.ic-table-wrap {
-  margin-top: 20px;
+/* ── Loading / empty ─────────────────────────────────────────────────── */
+
+.icv-loading,
+.icv-empty {
+  margin-top: 32px;
+  padding: 40px 24px;
+  text-align: center;
+  font-size: 0.92rem;
+  color: #94a3b8;
+}
+
+/* ── Grid — 2 columns desktop, 1 mobile ──────────────────────────────── */
+
+.icv-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+}
+
+@media (max-width: 860px) {
+  .icv-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Card ─────────────────────────────────────────────────────────────── */
+
+.icv-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
   overflow: hidden;
+  transition: box-shadow 0.2s, transform 0.2s;
 }
 
-/* ── Caption bar — spans full viewport width ──────────────────────────── */
+.icv-card:hover {
+  box-shadow: 0 6px 24px rgba(0,0,0,0.10);
+  transform: translateY(-2px);
+}
 
-.ic-table-caption {
+/* ── Card head — category pill + count badge ─────────────────────────── */
+
+.icv-card-head {
   display: flex;
   align-items: center;
-  padding: 10px 20px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #fff;
-  background: #8b5cf6;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #f1f5f9;
 }
 
-.ic-count-badge {
-  margin-left: auto;
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
-  padding: 2px 12px;
+.icv-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px;
   border-radius: 20px;
-  font-size: 0.7rem;
-  font-weight: 600;
-}
-
-/* ── Table — width constrained to layout content area ─────────────────── */
-
-.ic-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.ic-table thead th {
-  padding: 14px 20px;
-  text-align: left;
   font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #fff;
-  background: #8b5cf6;
-  border-bottom: 2px solid #7c3aed;
-}
-
-.ic-table tbody tr {
-  transition: background 0.15s;
-}
-
-.ic-table tbody tr:hover {
-  background: #ede9fe;
-}
-
-.ic-table tbody td {
-  padding: 14px 20px;
-  font-size: 0.875rem;
-  color: #334155;
-  border-bottom: 1px solid #e2e8f0;
-  background: #fff;
-}
-
-.ic-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
-   Category pills — colour-coded per canonical label
-   ═══════════════════════════════════════════════════════════════════════ */
-
-.ic-cat-pill {
-  display: inline-block;
-  padding: 3px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
   font-weight: 700;
   white-space: nowrap;
 }
 
-/* Power & Electrical — amber-orange */
-.ic-cat-pill.cat-power {
-  background: #fff7ed;
-  color: #c2410c;
+.icv-pill.cat-power   { background: #fff7ed; color: #c2410c; }
+.icv-pill.cat-brewing { background: #f0fdfa; color: #0d9488; }
+.icv-pill.cat-heating { background: #fef2f2; color: #dc2626; }
+.icv-pill.cat-leaking { background: #eef2ff; color: #4f46e5; }
+.icv-pill.cat-config  { background: #faf5ff; color: #7c3aed; }
+.icv-pill.cat-other   { background: #f1f5f9; color: #475569; }
+
+.icv-badge {
+  margin-left: auto;
+  background: #ede9fe;
+  color: #6d28d9;
+  padding: 2px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
-/* Brewing — teal */
-.ic-cat-pill.cat-brewing {
-  background: #f0fdfa;
-  color: #0d9488;
+/* ── Question rows ─────────────────────────────────────────────────────── */
+
+.icv-rows { padding: 6px 0; }
+
+.icv-row {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  gap: 0;
+  align-items: baseline;
+  padding: 9px 18px;
+  border-bottom: 1px solid #f8fafc;
+  transition: background 0.15s;
 }
 
-/* Heating — red */
-.ic-cat-pill.cat-heating {
-  background: #fef2f2;
-  color: #dc2626;
+.icv-row:last-child { border-bottom: none; }
+.icv-row:hover { background: #faf5ff; }
+
+/* colour dot — injected via style='--dot:#hex' on the card wrapper */
+.icv-row .icv-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--dot, #94a3b8);
+  flex-shrink: 0;
+  align-self: center;
 }
 
-/* Leaking — indigo */
-.ic-cat-pill.cat-leaking {
-  background: #eef2ff;
-  color: #4f46e5;
+.icv-q {
+  font-size: 0.865rem;
+  color: #334155;
+  line-height: 1.45;
+  padding: 0 10px;
+  word-break: break-word;
 }
 
-/* Configuration — purple */
-.ic-cat-pill.cat-config {
-  background: #faf5ff;
-  color: #7c3aed;
-}
-
-/* Other — slate */
-.ic-cat-pill.cat-other {
-  background: #f1f5f9;
-  color: #475569;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
-   Loading / empty states
-   ═══════════════════════════════════════════════════════════════════════ */
-
-.ic-loading,
-.ic-empty {
-  padding: 32px 24px;
-  text-align: center;
-  font-size: 0.88rem;
-  color: #94a3b8;
+.icv-dt {
+  font-size: 0.72rem;
+  color: #b0bec5;
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding-left: 10px;
 }

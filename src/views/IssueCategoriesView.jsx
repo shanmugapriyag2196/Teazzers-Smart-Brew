@@ -2,7 +2,25 @@ import { useState, useEffect, useCallback } from 'react';
 import { loadRecentHistory } from '../components/ChatBot';
 import './IssueCategoriesView.css';
 
-const CAT_CLASS = {
+const DOT_COLOR = {
+  'Power & Electrical Issues': '#f97316',
+  'Brewing Issues':            '#14b8a6',
+  'Heating Issues':            '#ef4444',
+  'Leaking Issues':            '#6366f1',
+  'Configuration Issues':      '#8b5cf6',
+  'Other Issues':              '#94a3b8',
+};
+
+const ICON = {
+  'Power & Electrical Issues': '⚡',
+  'Brewing Issues':            '☕',
+  'Heating Issues':            '🔥',
+  'Leaking Issues':            '💧',
+  'Configuration Issues':      '⚙',
+  'Other Issues':              '📋',
+};
+
+const PILL_CLS = {
   'Power & Electrical Issues': 'cat-power',
   'Brewing Issues':            'cat-brewing',
   'Heating Issues':            'cat-heating',
@@ -11,15 +29,30 @@ const CAT_CLASS = {
   'Other Issues':              'cat-other',
 };
 
+// Fixed card order — always all 6 boxes, empty ones hidden
+const ORDER = [
+  'Heating Issues',
+  'Power & Electrical Issues',
+  'Leaking Issues',
+  'Brewing Issues',
+  'Configuration Issues',
+  'Other Issues',
+];
+
 export default function IssueCategoriesView() {
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading]   = useState(true);
+  const [cats, setCats] = useState({});
+  const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const list = await loadRecentHistory(200);
-      setHistory(list);
+      const groups = {};
+      for (const item of list) {
+        const lbl = classify(item.question);
+        (groups[lbl] ||= []).push(item);
+      }
+      setCats(groups);
     } finally {
       setLoading(false);
     }
@@ -30,67 +63,72 @@ export default function IssueCategoriesView() {
     const id = setInterval(fetchData, 60_000); return () => clearInterval(id);
   }, [fetchData]);
 
-  function shortCategory(question) {
-    const lower = question.toLowerCase();
-    if (lower.includes('power') || lower.includes('electrical') || lower.includes('breaker') || lower.includes('outlet'))
+  function classify(q) {
+    const l = q.toLowerCase();
+    if (l.includes('power') || l.includes('electrical') || l.includes('breaker') || l.includes('outlet'))
       return 'Power & Electrical Issues';
-    if (lower.includes('brew') || lower.includes('grinder') || lower.includes('grind'))
+    if (l.includes('brew') || l.includes('grinder') || l.includes('grind'))
       return 'Brewing Issues';
-    if (lower.includes('heat') || lower.includes('temperature') || lower.includes('boiler') || lower.includes('steam') || lower.includes('therm'))
+    if (l.includes('heat') || l.includes('temperature') || l.includes('boiler') || l.includes('steam') || l.includes('therm'))
       return 'Heating Issues';
-    if (lower.includes('leak') || lower.includes('drip') || lower.includes('overflow') || lower.includes('water') || lower.includes('drain'))
+    if (l.includes('leak') || l.includes('drip') || l.includes('overflow') || l.includes('water') || l.includes('drain'))
       return 'Leaking Issues';
-    if (lower.includes('config') || lower.includes('wifi') || lower.includes('setting') || lower.includes('setup') || lower.includes('network'))
+    if (l.includes('config') || l.includes('wifi') || l.includes('setting') || l.includes('setup') || l.includes('network'))
       return 'Configuration Issues';
     return 'Other Issues';
   }
 
   function fmtDate(ms) {
-    if (!ms) return '—';
+    if (!ms) return '';
     return new Date(ms).toLocaleDateString('en-IN', {
       day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
     });
   }
 
   return (
-    <div className="issue-view">
-      <div className="page-header">
+    <div className="icv">
+      <div className="icv-header">
         <h2>Issue Categories</h2>
-        <p>Detailed view of all reported issues across the Teazzers Smart Brew fleet.</p>
+        <p>Questions asked in the AI Assistant, grouped by auto-detected category.</p>
       </div>
 
       {loading ? (
-        <div className="ic-loading">Loading questions from teazzers-history…</div>
-      ) : history.length === 0 ? (
-        <div className="ic-empty">No conversations recorded yet. Ask the AI Assistant a question to seed this list.</div>
+        <div className="icv-loading">Loading questions from teazzers-history…</div>
+      ) : ORDER.every(l => !cats[l]?.length) ? (
+        <div className="icv-empty">No conversations recorded yet. Ask the AI Assistant a question to seed this list.</div>
       ) : (
-        <div className="ic-table-wrap">
-          <div className="ic-table-caption">
-            pinecone ▸ teazzers ▸ teazzers-history
-            <span className="ic-count-badge">{history.length} records</span>
-          </div>
-          <table className="ic-table">
-            <thead>
-              <tr>
-                <th>Category</th>
-                <th>Question</th>
-                <th width="160">Answered On</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.map((item, i) => {
-                const cat    = shortCategory(item.question);
-                const catCls = CAT_CLASS[cat] || 'cat-other';
-                return (
-                  <tr key={item.id || i}>
-                    <td><span className={`ic-cat-pill ${catCls}`}>{cat}</span></td>
-                    <td style={{ fontWeight: 500 }}>{item.question}</td>
-                    <td style={{ color: '#64748b', fontSize: '0.82rem' }}>{fmtDate(item.timestamp)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="icv-grid">
+          {ORDER.filter(l => (cats[l] || []).length).map(label => {
+            const items  = cats[label] || [];
+            const icon   = ICON[label] || '📋';
+            const dot    = DOT_COLOR[label] || '#94a3b8';
+            const pillCls = PILL_CLS[label] || 'cat-other';
+
+            return (
+              <div
+                key={label}
+                className="icv-card"
+                style={{ '--dot': dot }}
+              >
+                <div className="icv-card-head">
+                  <span className={`icv-pill ${pillCls}`}>
+                    {icon} {label}
+                  </span>
+                  <span className="icv-badge">{items.length}</span>
+                </div>
+                <div className="icv-rows">
+                  {items.map((item, i) => (
+                    <div key={item.id || i} className="icv-row">
+                      <span className="icv-dot" />
+                      <div className="icv-q">{item.question}</div>
+                      <div className="icv-dt">{fmtDate(item.timestamp)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
