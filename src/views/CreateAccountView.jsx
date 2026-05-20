@@ -74,7 +74,6 @@ export default function CreateAccountView({ onCreated }) {
               <div className="ca-select-wrap">
                 <select id="ca-role" value={form.role} onChange={update('role')}>
                   <option value="admin">Admin</option>
-                  <option value="technician">Technician</option>
                   <option value="user">User</option>
                 </select>
                 <span className="ca-select-arrow">&#9662;</span>

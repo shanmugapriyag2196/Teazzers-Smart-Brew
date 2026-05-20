@@ -38,8 +38,7 @@ function mkrand(seed) {
     const lo  = Math.imul(BM_LO, s1) >>> 0;
     const mid = Math.imul(BM_HI, s1) * 0x80000000 >>> 0;
     const full_lo = (lo + mid) >>> 0;
-    const r   = (full_lo + Math.imul(s0 ^ 0, 2869860233)) >>> 0;
-    r0 = ((full_lo + Math.imul(s0 ^ 0, 2869860233)) >>> 0) / NORM;
+    let r0 = ((full_lo + Math.imul(s0 ^ 0, 2869860233)) >>> 0) / NORM;
     s0 = s1; s1 = s2;
     s2 = (Math.imul(s3 ^ 0, 951274213) + (s0 ^ 0) * 0x80000000) >>> 0;
     s3 = (r0 * NORM) >>> 0;
