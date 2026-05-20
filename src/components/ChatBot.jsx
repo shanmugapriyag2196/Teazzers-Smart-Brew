@@ -203,6 +203,7 @@ export default function ChatBot({ selectedIssue }) {
   const onHistoryItemClick = useCallback((item) => {
     setActiveHistoryId(item.id);
     setMessages([{ role: 'user', content: item.question }]);
+    messagesRef.current = [{ role: 'user', content: item.question }];   // keep ref in sync synchronously
     setInput(item.question);
     // Re-fetch answer from teazzers-data
     (async () => {
@@ -220,6 +221,7 @@ export default function ChatBot({ selectedIssue }) {
             messages: [{ role: 'user', content: item.question }],
             model: 'gpt-4o',
             stream: false,
+            embeddedBody: 'Only relevant conversation history for this specific question is available below. Answer based on the matching Pinecone Q-A data; do not restate or echo the greetings.',
           }),
         });
         if (!response.ok) {
@@ -231,7 +233,7 @@ export default function ChatBot({ selectedIssue }) {
         const answer = data?.message?.content || 'No answer found.';
         setMessages(prev => [...prev, { role: 'assistant', content: answer }]);
         // Re-save with fresh timestamp
-        saveToHistory(item.question, answer);
+        saveToHistory(item.question, answer).catch(e => console.warn('[history] save failed', e));
       } catch (err) {
         setError(safeErr(err));
         setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${safeErr(err)}. Support: support.teazzers.com` }]);
@@ -251,6 +253,7 @@ export default function ChatBot({ selectedIssue }) {
     setIsLoading(true);
     setError(null);
     setMessages(prev => [...prev, userMessage]);
+    messagesRef.current = [...messagesRef.current, userMessage]; // keep ref in sync synchronously
     setExpanded(prev => ({ ...prev, [prev.length]: false }));
 
     if (!API_KEY) {
