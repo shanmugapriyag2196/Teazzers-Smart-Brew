@@ -1,24 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { loadUsers } from '../utils/pineconeUserService';
 import './UsersView.css';
 
-// ── Seed data — cleared when real auth is wired ─────────────────────────
-const SEED_USERS = [
-  { id: 1, name: 'Admin User',    email: 'admin@teazzers.com',    role: 'admin',    status: 'active', lastLogin: '2026-05-20 09:14' },
-  { id: 2, name: 'Tech Support',  email: 'support@teazzers.com',  role: 'technician', status: 'active', lastLogin: '2026-05-20 08:52' },
-  { id: 3, name: 'John Smith',    email: 'john@teazzers.com',     role: 'user',      status: 'active', lastLogin: '2026-05-19 16:30' },
-  { id: 4, name: 'Priya G',       email: 'priya@teazzers.com',    role: 'admin',    status: 'active', lastLogin: '2026-05-19 14:00' },
-  { id: 5, name: 'Aarav Patel',   email: 'aarav@teazzers.com',    role: 'user',      status: 'inactive', lastLogin: '2026-04-15 11:22' },
-  { id: 6, name: 'Anita Roy',     email: 'anita@teazzers.com',    role: 'technician', status: 'active', lastLogin: '2026-05-18 10:05' },
-  { id: 7, name: 'David Lee',     email: 'david@teazzers.com',    role: 'user',      status: 'active', lastLogin: '2026-05-17 09:41' },
-  { id: 8, name: 'Mary K',        email: 'mary@teazzers.com',     role: 'user',      status: 'inactive', lastLogin: '2026-03-02 08:10' },
-];
-
-const ROLE_LABEL = { admin: 'Admin', technician: 'Technician', user: 'User' };
-
 export default function UsersView() {
-  const [users, setUsers]   = useState(SEED_USERS);
+  const [users, setUsers]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr]       = useState(null);
   const [showForm, setShowForm] = useState(false);
-  const [editUser, setEditUser] = useState(null);   // null = add mode, object = edit mode
+  const [editUser, setEditUser] = useState(null);
+
+  // ── Load users from Pinecone ──────────────────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    loadUsers()
+      .then(data => { if (!cancelled) { setUsers(data); setErr(null); } })
+      .catch(e  => { if (!cancelled) setErr(e.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   // ── Delete ────────────────────────────────────────────────────────────
   const handleDelete = (id) => {
@@ -129,6 +128,16 @@ export default function UsersView() {
   // ── Main table page ───────────────────────────────────────────────────
   return (
     <div className="uv">
+      {loading && (
+        <div style={{padding:'32px',textAlign:'center',color:'#8b5cf6',fontSize:'1.1rem'}}>
+          Loading users\u2026
+        </div>
+      )}
+      {err && (
+        <div style={{padding:'12px 32px',color:'#dc2626',fontSize:'.85rem',background:'#fef2f2',border:'1px solid #fca5a5',borderRadius:'10px',margin:'0 0 16px'}}>
+          {err}
+        </div>
+      )}
       <div className="page-header">
         <h2>Users</h2>
         <p>Manage Teazzers Smart Brew user accounts and access roles.</p>
@@ -160,7 +169,7 @@ export default function UsersView() {
                 <td style={{ color: '#64748b' }}>{user.email}</td>
                 <td>
                   <span className={`uv-role-pill uv-role-${user.role}`}>
-                    {ROLE_LABEL[user.role] || user.role}
+                    {({admin:'Admin',technician:'Technician',user:'User'}[user.role]) || user.role}
                   </span>
                 </td>
                 <td>

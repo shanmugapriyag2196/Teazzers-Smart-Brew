@@ -1,129 +1,102 @@
 /**
  * src/utils/pineconeUserService.js
  *
- * Thin wrapper that upserts user records into the separate
- * user-details-teazzers  Pinecone index.
+ * Two operations backed by the user-details-teazzers Pinecone index:
+ *   saveUser() — upsert one user record (used by CreateAccountView)
+ *   loadUsers() — query all records and return flat user objects
  *
  * Index  : user-details-teazzers
  * Host   : user-details-teazzers-dzfw7tw.svc.aped-4627-b74a.pinecone.io
  * Dim    : 1536
  * Region : us-east-1
+ * Org    : -Ot49ULywUQczk3JvNUb
  */
 
-// ── Index guardrail ─────────────────────────────────────────────────────────
-const METADATA_VECTOR_LIMIT = 40_960; // 40 KiB — leaves headroom under Pinecone's 48 KiB
+const METADATA_VECTOR_LIMIT = 40_960;
 
-/** Build a deterministic float32 payload-sized vector from identity fields only. */
-function encodeUserPayload({ name, email, role }) {
-  const payload = `${name}|${email}|${role}`;
-  const seed    = cyrb128(payload);
-  const seq     = mkrand(seed);
-  const vec     = new Float32Array(1536);
-  for (let i = 0; i < 1536; i++) {
-    const n = (seq() * 2 - 1).toFixed(5);        // [-1, 1), limited precision
-    vec[i] = parseFloat(n);                        // fits well inside int16 range
-  }
-  return vec;
-}
+/** Env-backed constants — overridable via Vite .env on Vercel */
+const USER_HOST = import.meta.env.VITE_USER_DETAILS_HOST
+  || 'user-details-teazzers-dzfw7tw.svc.aped-4627-b74a.pinecone.io';
+const USER_KEY  = import.meta.env.VITE_USER_DETAILS_API_KEY
+  || 'pcsk_2jtfLi_T52E75REzBUSqDYxaN3QCMzktEzKNG5MxuXEWJmLf4cvKp5PXaSMwZp8JMHG2fc';
 
-// ── cyrb128 + simple LCRNG (tinyhash-invariant, one file) ──────────────────
-function cyrb128(str) {
-  let h1 = 1779033703, h2 = 3144134277;
-  let h3 = 1013904242, h4 = 2773480762;
-  for (let i = 0, k; i < str.length; i++) {
-    k = str.charCodeAt(i);
-    h1 = h2 ^ Math.imul(h1 ^ k, 597399067);
-    h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);
-    h3 = h4 ^ Math.imul(h3 ^ k, 951274213);
-    h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);
-  }
-  h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);
-  h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);
-  h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);
-  h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);
-  return [(h1 ^ h2 ^ h3 ^ h4) >>> 0,
-          (h2 ^ h1 ^ h4 ^ h3) >>> 0,
-          (h3 ^ h4 ^ h1 ^ h2) >>> 0,
-          (h4 ^ h3 ^ h2 ^ h1) >>> 0];
-}
+const INDEX_URL   = `https://${USER_HOST}`;
+const QUERY_URL   = `${INDEX_URL}/query`;
+const UPSERT_URL  = `${INDEX_URL}/vectors/upsert`;
+
+// ── Deterministic 1536-dim float32 vector ────────────────────────────────────
+
+const BM      = 6364136223846793005n;   // full 64-bit modulus
+const BM_LO  = Number(BM & 0xFFFFFFFFn);
+const BM_HI  = Number(BM >> 32n);       // 1.492
+const NORM   = 2147483648;
 
 function mkrand(seed) {
   let s0 = seed[0] || 0, s1 = seed[1] || 0;
   let s2 = seed[2] || 0, s3 = seed[3] || 0;
-
-  // LCG constants for glibc-style sequence (split hi/lo so each chunk stays
-  // inside the JS safe-integer range before Math.imul sees it).
-  const BM = 6364136223846793005n;
-  const a  = 0;                         // high 32 bits of BM
-  const b0 = Number(BM & 0xFFFFFFFFn);  // low 32 bits of BM
-  const b1 = Number(BM >> 32n);         // high 32 bits of BM
-  const m  = 2147483648;                // 2^31 — mid-point normaliser
-
   return function () {
-    // full_lo = Math.imul(b_low, s1) + ((b_high * s1) << 31)
-    const lo   = Math.imul(b0, s1) >>> 0;
-    const mid  = (Math.imul(b1, s1) * 0x80000000) >>> 0;
+    const lo  = Math.imul(BM_LO, s1) >>> 0;
+    const mid = Math.imul(BM_HI, s1) * 0x80000000 >>> 0;
     const full_lo = (lo + mid) >>> 0;
-
-    const r  = ((full_lo + Math.imul(s0 ^ a, 2869860233)) >>> 0) / m;
-
-    s0 = s1; s1 = s2;                    // shift registers
-    s2 = (          Math.imul(s3 ^ a, 951274213)
-          + (s0 ^ a) * 0x80000000) >>> 0;
-    s3 = (r * m) >>> 0;
-    return r;
+    const r   = (full_lo + Math.imul(s0 ^ 0, 2869860233)) >>> 0;
+    r0 = ((full_lo + Math.imul(s0 ^ 0, 2869860233)) >>> 0) / NORM;
+    s0 = s1; s1 = s2;
+    s2 = (Math.imul(s3 ^ 0, 951274213) + (s0 ^ 0) * 0x80000000) >>> 0;
+    s3 = (r0 * NORM) >>> 0;
+    return r0;
   };
 }
 
-/** Lightly scramble user data before embedding it in the metadata blob. */
-function scramble(text) {
-  const s = cyrb128(text + 'TZZR_WRAP');
-  // Reversed fragment from first seed double → [0, 999] => +1 => [1, 1000]
-  return ((s[0] % 1000) + 1)
-    .toString().toLowerCase()
-    .padStart(3, '0');
-}
-
-/** Ensure the metadata JSON never exceeds Pinecone's 40 KiB metadata cap. */
-function metaWithinLimit(meta) {
-  const encoded = encodeURIComponent(JSON.stringify(meta)).length;
-  if (encoded > METADATA_VECTOR_LIMIT) {
-    // Drop the largest value first (candidates) then retry
-    const trimmed = Object.fromEntries(
-      Object.entries(meta).sort(([, a], [, b]) =>
-        JSON.stringify(b).length - JSON.stringify(a).length
-      ).slice(1)
-    );
-    return metaWithinLimit(trimmed);
+// cyrb128 returns [h1,h2,h3,h4] each guaranteed [0,2^32) after >>>0
+function cyrb128(str) {
+  let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;
+  for (let i = 0, k; i < str.length; i++) {
+    k = str.charCodeAt(i);
+    h1 = Math.imul(h2 ^ k, 597399067) ^ h1;
+    h2 = Math.imul(h3 ^ k, 2869860233) ^ h2;
+    h3 = Math.imul(h4 ^ k, 951274213) ^ h3;
+    h4 = Math.imul(h1 ^ k, 2716044179) ^ h4;
   }
-  return meta;
+  const seed = (arr, i) => (arr[i] = (Math.imul(arr[(i+1)%4], 2654435761) ^ arr[i]) >>> 0);
+  [h1,h2,h3,h4] = [seed([h1,h2,h3,h4],0), seed([h1,h2,h3,h4],1),
+                    seed([h1,h2,h3,h4],2), seed([h1,h2,h3,h4],3)];
+  return [h1 >>> 0, h2 >>> 0, h3 >>> 0, h4 >>> 0];
 }
 
-// ── Constants ───────────────────────────────────────────────────────────────
-const USER_HOST   = 'user-details-teazzers-dzfw7tw.svc.aped-4627-b74a.pinecone.io';
-const USER_KEY    = 'pcsk_2jtfLi_T52E75REzBUSqDYxaN3QCMzktEzKNG5MxuXEWJmLf4cvKp5PXaSMwZp8JMHG2fc';
-const INDEX_URL   = `https://${USER_HOST}`;
-const UPSERT_URL  = `${INDEX_URL}/vectors/upsert`;
+function encodeUserPayload({ name, email, role }) {
+  const payload = `${name}|${email}|${role}`;
+  const seq     = mkrand(cyrb128(payload));
+  const vec     = new Float32Array(1536);
+  for (let i = 0; i < 1536; i++) {
+    const v = Math.imul((seq() * 65536) | 0, (1 / 32768)) * (1/65536); // [-1,1)
+    vec[i] = v;
+  }
+  return vec;
+}
 
-// ── Public API ──────────────────────────────────────────────────────────────
+// ── guards ───────────────────────────────────────────────────────────────────
 
-/**
- * Upsert a single user record into the user-details-teazzers index.
- *
- * @param {{ name, email, role, passwordHash }} user
- * @returns {Promise<{ upsertedCount: number }>}
- */
+function scramble(text) {
+  return ((cyrb128(text + 'TZZR_WRAP')[0] % 1000) + 1).toString().padStart(3,'0');
+}
+
+function metaWithinLimit(meta) {
+  const enc = encodeURIComponent(JSON.stringify(meta)).length;
+  if (enc <= METADATA_VECTOR_LIMIT) return meta;
+  const sorted = Object.entries(meta)
+    .sort(([,a],[,b]) => JSON.stringify(b).length - JSON.stringify(a).length);
+  return metaWithinLimit(Object.fromEntries(sorted.slice(1)));
+}
+
+// ── Upsert one user ───────────────────────────────────────────────────────────
+
 export async function saveUser(user) {
-  if (!user?.name || !user?.email || !user?.role || !user?.passwordHash) {
-    console.error('[user-pinecone] missing required fields:', user);
+  if (!user.name || !user.email || !user.role || !user.passwordHash) {
+    console.error('[user-pinecone] missing fields:', user);
     return { upsertedCount: 0 };
   }
-
-  // ---- safe record id ──────────────────────────────────────────────────────
   const rawId    = `${user.name}${user.email}`;
-  const recordId = rawId.replace(/[^a-zA-Z0-9\-_]/g, '_').toLowerCase();
-
-  // ---- metadata (small, always in limit) ───────────────────────────────────
+  const recordId = rawId.replace(/[^a-zA-Z0-9\-_]/g,'_').toLowerCase();
   const now      = new Date().toISOString();
   const hName    = scramble(user.name);
   const hEmail   = scramble(user.email);
@@ -135,42 +108,71 @@ export async function saveUser(user) {
     hn: hName, he: hEmail, hr: hRole, hp: hPass,
     createdAt: now,
   });
-
-  // ---- vector ───────────────────────────────────────────────────────────────
   const vec = encodeUserPayload({ name: user.name, email: user.email, role: user.role });
-
-  // ---- upsert ───────────────────────────────────────────────────────────────
-  const body = {
-    namespace: 'default',
-    vectors: [{
-      id:       recordId,
-      values:   Array.from(vec),
-      metadata: meta,
-    }],
-  };
-
+  const body = { namespace:'default', vectors:[{ id:recordId, values:Array.from(vec), metadata:meta }] };
   try {
     const res = await fetch(UPSERT_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Api-Key':        USER_KEY,
-        'X-Pinecone-Api-Version': '2025-10',
-      },
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Api-Key':USER_KEY, 'X-Pinecone-Api-Version':'2025-10' },
       body: JSON.stringify(body),
     });
-
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '<no body>');
-      throw new Error(`Pinecone /vectors/upsert → ${res.status}: ${errText}`);
-    }
-
+    if (!res.ok) { const t = await res.text().catch(()=>''); throw new Error(`${res.status}: ${t}`); }
     const data = await res.json();
     return { upsertedCount: data.upsertedCount ?? 0 };
-  } catch (err) {
-    console.error('[user-pinecone] saveUser failed:', err);
-    return { upsertedCount: 0 };
+  } catch(err) { console.error('[user-pinecone] saveUser failed:', err); return { upsertedCount:0 }; }
+}
+
+// ── Query ALL users ──────────────────────────────────────────────────────────
+
+/**
+ * Fetch every vector from user-details-teazzers and return a flat array
+ * of plain user objects ready for the Users table.
+ *
+ * @returns {Promise<Array<{id,name,email,role,status,lastLogin}>>}
+ */
+export async function loadUsers() {
+  const body = {
+    namespace:   'default',
+    topK:        10000,
+    includeValues: false,
+    includeMetadata: true,
+  };
+  try {
+    const res = await fetch(QUERY_URL, {
+      method:  'POST',
+      headers: { 'Content-Type':'application/json', 'Api-Key':USER_KEY, 'X-Pinecone-Api-Version':'2025-10' },
+      body:    JSON.stringify(body),
+    });
+    if (!res.ok) { const t = await res.text().catch(()=>''); throw new Error(`${res.status}: ${t}`); }
+    const { matches } = await res.json();
+    return matches.map(m => {
+      const meta = m.metadata || {};
+      const ts   = meta.createdAt;
+      return {
+        id:   m.id,
+        name: meta.n || '—',
+        email: meta.e || '—',
+        role:  meta.r || 'user',
+        status:          'active',
+        lastLogin: ts ? fmtDate(ts) : '—',
+      };
+    });
+  } catch(err) {
+    console.error('[user-pinecone] loadUsers failed:', err);
+    return [];
   }
 }
 
-export { encodeUserPayload };
+/** Format  ISO / RFC3339 / Date-convertible string → "YYYY-MM-DD HH:mm" */
+function fmtDate(ts) {
+  try {
+    const d = new Date(ts);
+    if (isNaN(d)) return String(ts).slice(0,16).replace('T',' ');
+    const y  = d.getFullYear();
+    const m  = String(d.getMonth()+1).padStart(2,'0');
+    const dy = String(d.getDate()).padStart(2,'0');
+    const h  = String(d.getHours()).padStart(2,'0');
+    const mi = String(d.getMinutes()).padStart(2,'0');
+    return `${y}-${m}-${dy} ${h}:${mi}`;
+  } catch { return String(ts).slice(0,16).replace('T',' '); }
+}
