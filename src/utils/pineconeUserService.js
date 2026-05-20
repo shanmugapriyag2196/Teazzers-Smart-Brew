@@ -130,10 +130,15 @@ export async function saveUser(user) {
  * @returns {Promise<Array<{id,name,email,role,status,lastLogin}>>}
  */
 export async function loadUsers() {
+  // A zero-vector anchor satisfies Pinecone's /query "vector required" guard
+  // while topK=10000 + cosine pulls every record in the index (no real similarity
+  // filter applied — we just want the full list).
+  const zeroVec = new Float32Array(1536);
   const body = {
-    namespace:   'default',
-    topK:        10000,
-    includeValues: false,
+    namespace:      'default',
+    vector:         Array.from(zeroVec),
+    topK:           10000,
+    includeValues:  false,
     includeMetadata: true,
   };
   try {
@@ -144,7 +149,7 @@ export async function loadUsers() {
     });
     if (!res.ok) { const t = await res.text().catch(()=>''); throw new Error(`${res.status}: ${t}`); }
     const { matches } = await res.json();
-    return matches.map(m => {
+    return (matches || []).map(m => {
       const meta = m.metadata || {};
       const ts   = meta.createdAt;
       return {

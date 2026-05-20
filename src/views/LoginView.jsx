@@ -62,7 +62,7 @@ export default function LoginView({ onLogin }) {
                 onClick={() => setShowPw(v => !v)}
                 aria-label={showPw ? 'Hide password' : 'Show password'}
               >
-                {showPw ? '&#x1F441;' : '&#x1F50D;'}
+                {/*{showPw ? '&#x1F441;' : '&#x1F50D;'}*/}
               </button>
             </div>
           </div>
