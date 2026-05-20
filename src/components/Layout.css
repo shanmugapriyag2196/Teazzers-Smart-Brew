@@ -137,6 +137,73 @@
   color: #fff;
 }
 
+/* ── Divider inside sidebar-nav (above user block) ────────────────────────── */
+.sidebar-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 8px 16px 12px;
+}
+
+/* ── User block at bottom of sidebar ─────────────────────────────────────── */
+.sidebar-user {
+  padding: 10px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.su-email {
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+
+.su-logout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 14px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #f87171;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.su-logout-btn:hover {
+  background: rgba(239, 68, 68, 0.28);
+  border-color: rgba(252, 165, 165, 0.5);
+}
+
+/* collapsed sidebar: icon-only logout */
+.sidebar-user.collapsed {
+  align-items: center;
+  padding: 10px 8px 14px;
+}
+
+.sidebar-user.collapsed .su-logout-btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  justify-content: center;
+  font-size: 1rem;
+  border-radius: 10px;
+}
+
+.sidebar-user.collapsed .su-email {
+  display: none;
+}
+
 /* ─── Main Content ─── */
 .main-content {
   flex: 1;

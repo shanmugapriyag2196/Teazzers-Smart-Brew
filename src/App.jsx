@@ -20,13 +20,13 @@ function AppInner() {
   const [authMode, setAuthMode] = useState('login');
   const [activeView, setActiveView] = useState('dashboard');
   const [selectedConversation, setSelectedConversation] = useState(null);
-  const { setUser, refreshUsers, logout } = useUser();
+  const { setUser, refreshUsers } = useUser();
 
-  // Wire setter so Login / CreateAccount can switch into the app
+  // Wire setter so Login / CreateAccount can transition to the app
   useEffect(() => {
     window.__setAuthMode = setAuthMode;
     return () => { window.__setAuthMode = null; };
-  }, []);
+  }, [setAuthMode]);
 
   // ── Login → query Pinecone fresh, set user, enter app ────────────────────
   const handleLogin = useCallback(async (email) => {
@@ -37,13 +37,6 @@ function AppInner() {
     if (match) setUser(match);
     setAuthMode('app');                                     // always enter
   }, [setUser]);
-
-  // ── Logout → clear context + show Login page ───────────────────────────
-  const handleLogout = useCallback(() => {
-    logout();
-    setActiveView('dashboard');
-    setAuthMode('login');
-  }, [logout, setAuthMode, setActiveView]);
 
   // ── After Settings save → refresh from Pinecone ────────────────────────
   const handleUserSaved = useCallback(async () => {
@@ -56,7 +49,7 @@ function AppInner() {
   };
 
   const views = {
-    'dashboard':        <DashboardView onLogout={handleLogout} />,
+    'dashboard':        <DashboardView />,
     'ai-assistant':     <AIAssistantView selectedConversation={selectedConversation} onConversationHandled={() => setSelectedConversation(null)} />,
     'issues-count':     <IssuesCountView />,
     'issue-categories': <IssueCategoriesView onConversationSelect={handleConversationSelect} />,

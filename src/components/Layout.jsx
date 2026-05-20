@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useUser } from '../context/UserContext';
 import './Layout.css';
 
 const navItems = [
@@ -12,6 +13,12 @@ const navItems = [
 
 export default function Layout({ activeView, onViewChange, children }) {
   const [collapsed, setCollapsed] = useState(false);
+  const { user, logout } = useUser();
+
+  const handleLogout = () => {
+    logout();
+    if (window.__setAuthMode) window.__setAuthMode('login');
+  };
 
   return (
     <div className="layout">
@@ -34,7 +41,22 @@ export default function Layout({ activeView, onViewChange, children }) {
               {!collapsed && <span className="nav-label">{item.label}</span>}
             </button>
           ))}
+
+          {/* ── Divider above the user block ───────────────────────────────── */}
+          {!collapsed && <div className="sidebar-divider" />}
         </nav>
+
+        {/* ── Bottom: user email + logout pill ─────────────────────────────── */}
+        {user?.email && (
+          <div className={`sidebar-user ${collapsed ? 'collapsed' : ''}`}>
+            {!collapsed && (
+              <span className="su-email" title={user.email}>{user.email}</span>
+            )}
+            <button className="su-logout-btn" onClick={handleLogout} title="Sign out">
+              &#9077; {collapsed ? '' : 'Logout'}
+            </button>
+          </div>
+        )}
 
         <button
           className="sidebar-toggle"

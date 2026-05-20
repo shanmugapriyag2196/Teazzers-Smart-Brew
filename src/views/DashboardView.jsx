@@ -13,7 +13,7 @@ const SEED = [
   { id: 'other',   label: 'Other Issues',              icon: '📋', trend: '—' },
 ];
 
-export default function DashboardView({ onLogout }) {
+export default function DashboardView() {
   const { user } = useUser();
   const [issueData, setIssueData] = useState(SEED);
   const prevRef                   = useRef(null);
@@ -54,20 +54,8 @@ export default function DashboardView({ onLogout }) {
 
   return (
     <div className="dashboard-view" style={{ padding: 0 }}>
-      {/* ── Header: centred greeting+subtitle ────────────────────────────────── */}
+      {/* ── Centred greeting + subtitle; email / logout moved to sidebar ─── */}
       <div className="dv-header">
-        {/* email + logout pill — absolutely pinned to top-right corner */}
-        {user?.email && (
-          <div className="dv-header-pill">
-            <div className="dv-user-pill">
-              <span className="dv-user-dot" />
-              <span className="dv-user-email">{user.email}</span>
-              <button className="dv-logout-btn" onClick={onLogout} title="Sign out">
-                &#9077; Logout
-              </button>
-            </div>
-          </div>
-        )}
         <div className="dv-header-mid">
           <h2>Welcome Back, {user?.name || 'Admin'}</h2>
           <p>Here's what's happening with your Teazzers Smart Brew system today.</p>
