@@ -12,6 +12,9 @@ const CAT_CLASS = {
   'Other Issues':              'cat-other',
 };
 
+// Column order: Category | Question | Answered On
+const COLS = ['category', 'question', 'answered'];
+
 export default function IssueCategoriesView() {
   const [history, setHistory] = useState([]);
   const [loading, setLoading]   = useState(true);
@@ -19,7 +22,7 @@ export default function IssueCategoriesView() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const list = await loadRecentHistory(200);   // last 200 questions across all categories
+      const list = await loadRecentHistory(200);
       setHistory(list);
     } finally {
       setLoading(false);
@@ -31,7 +34,6 @@ export default function IssueCategoriesView() {
     const id = setInterval(fetchData, 60_000); return () => clearInterval(id);
   }, [fetchData]);
 
-  // Domain label: strip the long suffix to produce short machine-readable labels
   function shortCategory(question) {
     const lower = question.toLowerCase();
     if (lower.includes('power') || lower.includes('electrical') || lower.includes('breaker') || lower.includes('outlet'))
@@ -47,7 +49,6 @@ export default function IssueCategoriesView() {
     return 'Other Issues';
   }
 
-  // Timestamps already in metadata via loadRecentHistory
   function fmtDate(ms) {
     if (!ms) return '—';
     return new Date(ms).toLocaleDateString('en-IN', {
@@ -62,15 +63,8 @@ export default function IssueCategoriesView() {
         <p>Detailed view of all reported issues across the Teazzers Smart Brew fleet.</p>
       </div>
 
-      {/*
-        ── QUESTIONS LIST ──────────────────────────────────────────────
-        Drawn directly from the teazzers-history Pinecone index.
-        Loaded on mount, refreshed every 60 s.
-        Each item shows: Question | Category | Answered On | Record ID
-        – no Severity / Status columns
-      */}
       <p className="section-title" style={{ marginTop: 24 }}>
-        Recent Questions &amp; Responses from History
+        Recent Questions and Responses from History
       </p>
 
       {loading ? (
@@ -87,10 +81,9 @@ export default function IssueCategoriesView() {
             <thead>
               <tr>
                 <th width="55">#</th>
+                <th>Category</th>
                 <th>Question</th>
-                <th width="220">Category</th>
                 <th width="140">Answered On</th>
-                <th width="180" style={{ fontFamily: 'monospace', fontSize: '0.72rem' }}>Record ID</th>
               </tr>
             </thead>
             <tbody>
@@ -100,16 +93,13 @@ export default function IssueCategoriesView() {
                 return (
                   <tr key={item.id || i}>
                     <td style={{ color: '#94a3b8', textAlign: 'center' }}>{i + 1}</td>
-                    <td style={{ fontWeight: 500, maxWidth: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {item.question}
-                    </td>
                     <td>
                       <span className={`ic-cat-pill ${catCls}`}>{cat}</span>
                     </td>
-                    <td style={{ color: '#64748b', fontSize: '0.82rem' }}>{fmtDate(item.timestamp)}</td>
-                    <td style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: '#94a3b8' }}>
-                      {item.id || '—'}
+                    <td style={{ fontWeight: 500, maxWidth: 520, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {item.question}
                     </td>
+                    <td style={{ color: '#64748b', fontSize: '0.82rem' }}>{fmtDate(item.timestamp)}</td>
                   </tr>
                 );
               })}
