@@ -51,21 +51,24 @@ async function getEmbedding(text) {
 // ── teazzers-history helpers ────────────────────────────────────────────
 async function saveToHistory(question, answer) {
   const embedding = await getEmbedding(question);
-  const id        = `hist_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-  const payload    = {
-    vectors: {
-      [id]: {
-        id,
-        values: embedding,
-        metadata: {
+  if (!embedding.length) return;
+  const vecId = `hist_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const dateStr = new Date().toISOString();
+  const payload  = {
+    vectors: [
+      {
+        id:         vecId,
+        values:     embedding,
+        metadata:   {
           id,
           question,
           answer,
-          timestamp: Date.now(),
+          timestamp:     Date.now(),
           timestamp_type: 'unix_ms',
+          dateStr,
         },
       },
-    },
+    ],
   };
   const r = await fetch(HISTORY_UPSERT_URL, {
     method: 'POST',
@@ -248,11 +251,11 @@ export default function ChatBot({ selectedIssue }) {
           'Content-Type': 'application/json',
           'X-Pinecone-Api-Version': '2025-10',
         },
-        body: JSON.stringify({
-          messages: messages.map(m => ({ role: m.role, content: m.content })),
-          model: 'gpt-4o',
-          stream: false,
-        }),
+      body: JSON.stringify({
+        messages: messagesRef.current.map(m => ({ role: m.role, content: m.content })),
+        model: 'gpt-4o',
+        stream: false,
+      }),
       });
 
       if (!response.ok) {
