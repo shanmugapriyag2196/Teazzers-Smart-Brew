@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { loadRecentHistory, CATEGORIES } from '../components/ChatBot';
+import { loadRecentHistory } from '../components/ChatBot';
 import './IssueCategoriesView.css';
 
-// Category → pill class mapping
 const CAT_CLASS = {
   'Power & Electrical Issues': 'cat-power',
   'Brewing Issues':            'cat-brewing',
@@ -60,42 +59,34 @@ export default function IssueCategoriesView() {
         <p>Detailed view of all reported issues across the Teazzers Smart Brew fleet.</p>
       </div>
 
-      <p className="section-title" style={{ marginTop: 24 }}>
-        Recent Questions and Responses from History
-      </p>
-
       {loading ? (
         <div className="ic-loading">Loading questions from teazzers-history…</div>
       ) : history.length === 0 ? (
         <div className="ic-empty">No conversations recorded yet. Ask the AI Assistant a question to seed this list.</div>
       ) : (
-        <div className="table-wrap">
-          <div className="table-caption">
+        <div className="ic-section">
+          <div className="ic-table-caption">
             pinecone ▸ teazzers ▸ teazzers-history
             <span className="ic-count-badge">{history.length} records</span>
           </div>
-          <table className="ic-table">
+          <table className="ic-table ic-table-full">
             <thead>
               <tr>
                 <th width="55">#</th>
                 <th>Category</th>
                 <th>Question</th>
-                <th width="140">Answered On</th>
+                <th width="160">Answered On</th>
               </tr>
             </thead>
             <tbody>
               {history.map((item, i) => {
-                const cat   = shortCategory(item.question);
+                const cat    = shortCategory(item.question);
                 const catCls = CAT_CLASS[cat] || 'cat-other';
                 return (
                   <tr key={item.id || i}>
                     <td style={{ color: '#94a3b8', textAlign: 'center' }}>{i + 1}</td>
-                    <td>
-                      <span className={`ic-cat-pill ${catCls}`}>{cat}</span>
-                    </td>
-                    <td style={{ fontWeight: 500, maxWidth: 520, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {item.question}
-                    </td>
+                    <td><span className={`ic-cat-pill ${catCls}`}>{cat}</span></td>
+                    <td style={{ fontWeight: 500 }}>{item.question}</td>
                     <td style={{ color: '#64748b', fontSize: '0.82rem' }}>{fmtDate(item.timestamp)}</td>
                   </tr>
                 );
