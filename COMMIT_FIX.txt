@@ -1,0 +1,10 @@
+fix: IssueCategoriesView remove index column and sub-heading
+
+Table header changed from 4 columns to 3 columns:
+  Before: # | Category | Question | Answered On
+  After:  Category | Question | Answered On
+
+The index number column and its CSS rule removed entirely.
+The "Recent Questions and Responses from History" sub-heading paragraph removed.
+All rows now start directly with Category pill, then question text, then date.
+No other layout, styling, or data-fetching logic was changed.

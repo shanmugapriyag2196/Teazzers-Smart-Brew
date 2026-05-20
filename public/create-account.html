@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Create Account — Teazzers Smart Brew</title>
+  <link rel="icon" href="/favicon.svg" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #1a1a2e;
+    }
+
+    /* logo/brand */
+    .ui-logo  { font-size: 2.4rem; text-align: center; margin-bottom: 4px; }
+    .ui-brand { text-align: center; margin-bottom: 28px; }
+    .ui-brand h1 { font-size: 1.5rem; font-weight: 800; color: #8b5cf6; letter-spacing: 2px; }
+    .ui-brand span { display: block; font-size: .7rem; color: #94a3b8; letter-spacing: 1px; margin-top: 4px; }
+
+    /* card */
+    .ui-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 36px 32px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.18);
+      width: 100%;
+      max-width: 440px;
+    }
+
+    .ui-card h2 { font-size: 1.35rem; font-weight: 700; color: #1a1a2e; margin-bottom: 6px; }
+    .ui-card p  { font-size: .875rem; color: #94a3b8; margin-bottom: 24px; }
+
+    /* form */
+    .ui-form { display: flex; flex-direction: column; gap: 16px; }
+    .ui-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    .ui-field label {
+      display: block; font-size: .76rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .4px;
+      color: #64748b; margin-bottom: 5px;
+    }
+
+    .ui-field input, .ui-field select {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: .9rem;
+      font-family: inherit;
+      color: #334155;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    .ui-field input:focus, .ui-field select:focus {
+      border-color: #8b5cf6;
+      box-shadow: 0 0 0 3px rgba(139,92,246,.15);
+    }
+
+    /* primary button */
+    .ui-btn-primary {
+      padding: 12px;
+      background: linear-gradient(135deg,#8b5cf6,#6366f1);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: .95rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(139,92,246,.38);
+      transition: opacity .2s;
+      margin-top: 4px;
+    }
+
+    .ui-btn-primary:hover { opacity: .87; }
+
+    /* links / divider */
+    .ui-btn-link  { display: block; text-align: center; font-size: .82rem; color: #8b5cf6; text-decoration: none; font-weight: 600; margin-top: 6px; }
+    .ui-btn-link:hover { text-decoration: underline; }
+    .ui-divider { display: flex; align-items: center; gap: 12px; color: #cbd5e1; font-size: .76rem; margin-top: 4px; }
+    .ui-divider::before, .ui-divider::after { content: ''; flex: 1; height: 1px; background: #e2e8f0; }
+  </style>
+</head>
+<body>
+  <div class="ui-card">
+    <div class="ui-brand">
+      <div class="ui-logo">☕</div>
+      <h1>TEAZZERS</h1>
+      <span>SmartBrew · Create Account</span>
+    </div>
+
+    <h2>Create your account</h2>
+    <p>Join the Teazzers Smart Brew support team.</p>
+
+    <form class="ui-form" onsubmit="handleCreate(event)">
+      <div class="ui-field">
+        <label for="cName">Full Name</label>
+        <input id="cName" type="text" placeholder="John Smith" required autocomplete="name" />
+      </div>
+
+      <div class="ui-field">
+        <label for="cEmail">Email Address</label>
+        <input id="cEmail" type="email" placeholder="you@company.com" required autocomplete="email" />
+      </div>
+
+      <div class="ui-field-row">
+        <div class="ui-field">
+          <label for="cRole">Role</label>
+          <select id="cRole">
+            <option value="user">User</option>
+            <option value="technician">Technician</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div class="ui-field">
+          <label for="cOrg">Organisation</label>
+          <input id="cOrg" type="text" placeholder="Teazzers Pvt Ltd" />
+        </div>
+      </div>
+
+      <div class="ui-field-row">
+        <div class="ui-field">
+          <label for="cPwd">Password</label>
+          <input id="cPwd" type="password" placeholder="Min 8 characters" required autocomplete="new-password" minlength="8" />
+        </div>
+        <div class="ui-field">
+          <label for="cPwd2">Confirm Password</label>
+          <input id="cPwd2" type="password" placeholder="Re-enter password" required autocomplete="new-password" minlength="8" />
+        </div>
+      </div>
+
+      <button type="submit" class="ui-btn-primary">Create Account</button>
+    </form>
+
+    <div class="ui-divider" style="margin-top:16px">or</div>
+
+    <a href="/login.html" class="ui-btn-link">Already have an account? Sign in</a>
+  </div>
+
+  <script>
+    function handleCreate(e) {
+      // e.preventDefault();
+      // const payload = {
+      //   name:     document.getElementById('cName').value,
+      //   email:    document.getElementById('cEmail').value,
+      //   role:     document.getElementById('cRole').value,
+      //   org:      document.getElementById('cOrg').value,
+      //   password: document.getElementById('cPwd').value,
+      // };
+      // fetch('/api/users', { method: 'POST', body: JSON.stringify(payload), ... })
+      //   .then(r => { if (r.ok) location.href = '/login.html'; });
+    }
+  </script>
+</body>
+</html>

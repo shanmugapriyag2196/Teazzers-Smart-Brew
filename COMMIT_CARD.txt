@@ -1,0 +1,19 @@
+feat: IssueCategoriesView redone as 6 category card grid
+
+Replaced the flat table with a 2-column card grid — one card per canonical
+category — with a colour pill in the card header and questions listed as
+rows inside each card.  Table removed completely.
+
+Layout:
+ - 6 category cards in a responsive 2-column grid (1 column on mobile)
+ - Each card shows:
+     • A colour-coded pill in the header (icon + category name)
+     • A count badge with the number of questions in that category
+     • A list of question rows, each with a coloured dot, the question
+       text, and a timestamp
+ - Cards always ordered the same way: Heating Issues, Power and Electrical,
+   Leaking, Brewing, Configuration, Other
+ - Empty categories hidden; questions grouped by a local classify() fn
+ - No table markup, no caption div — only 6 cards in the grid.
+
+No other view or layout file was modified.

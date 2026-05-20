@@ -1,0 +1,38 @@
+feat: Users page — table + add/edit/delete modal; login + create-account landing pages
+
+UsersView (src/views/UsersView.jsx + UsersView.css)
+  • Table columns: Name | Email | Role | Status | Last Login | Actions
+  • 8 seed users across 3 roles: Admin / Technician / User
+  • Role pills: Admin=red, Technician=green, User=blue
+  • Status pills: Active=green dot, Inactive=slate circle
+  • Actions column: pencil (edit) and cross (delete) icon buttons
+  • Add User button in toolbar (purple gradient primary button)
+  • Click Add → opens modal in "create" mode
+  • Click edit pencil → opens same modal in "edit" mode, fields pre-filled
+  • Modal fields: Full Name, Email, Role (select), Status (select)
+  • Save button updates state in place; Cancel or × closes modal
+  • Delete removes the row immediately (optimistic update)
+  • Rows hover to a soft lavender tint
+
+Create Account landing page (public/create-account.html)
+  • Standalone HTML page, no sidebar/layout — full-screen dark gradient bg
+  • Teazzers logo + brand header
+  • Fields: Full Name, Email, Role (select), Organisation, Password, Confirm Password
+  • Purple primary CTA: Create Account
+  • "Already have an account? Sign in" link → /login.html
+  • JavaScript hook stubs ready for backend API wiring
+
+Login landing page (public/login.html)
+  • Standalone HTML page, same visual style as create-account page
+  • Fields: Email Address, Password
+  • Purple primary CTA: Sign In
+  • "Create a new account" link → /create-account.html
+  • JavaScript hook stub ready for backend auth wiring
+
+Auth.css (src/views/Auth.css)
+  • Shared styles for both landing pages: .ui-card, .ui-form, .ui-field,
+    .ui-btn-primary, .ui-btn-link, .ui-divider, .ui-brand
+  • .uv-* (UsersView) styles live exclusively in UsersView.css
+
+No existing view, Layout, or App structure was modified beyond adding the
+UsersView import, which was already present.

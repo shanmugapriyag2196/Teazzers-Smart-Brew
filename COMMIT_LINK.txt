@@ -1,0 +1,27 @@
+feat: IssueCategoriesView card rows clickable → open AI Assistant with full Q+A
+
+Each question row in the Issue Categories card grid is now clickable.
+Clicking a question navigates to the AI Assistant view and shows both the
+question and its stored answer immediately — no re-fetch from the Pinecone
+Assistant, no "Thinking…" spinner.
+
+Changes across 4 files:
+
+1. IssueCategoriesView.jsx
+   - Accept onConversationSelect prop
+   - Call it on click / Enter-Key on each question row
+   - Pass the full Pinecone item (question + answer + timestamp + id)
+
+2. App.jsx
+   - Added selectedConversation state + handleConversationSelect handler
+   - AIAssistantView receives selectedConversation + onConversationHandled
+
+3. AIAssistantView.jsx
+   - Forwards selectedConversation + onConversationHandled to ChatBot
+
+4. ChatBot.jsx
+   - New useEffect watches selectedConversation prop
+   - On change: seeds messages with [user(Q), assistant(A)] in one frame
+   - Calls onConversationHandled() so App clears the prop after render
+
+No other view, layout, or CSS file was touched.
