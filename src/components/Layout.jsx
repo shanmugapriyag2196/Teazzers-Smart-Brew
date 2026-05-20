@@ -4,6 +4,7 @@ import './Layout.css';
 const navItems = [
   { id: 'dashboard',       label: 'Dashboard', icon: '◻' },
   { id: 'ai-assistant',    label: 'AI Assistant', icon: '◉' },
+  { id: 'issues-count',    label: 'Issue Count', icon: '📊' },
   { id: 'issue-categories', label: 'Issue Categories', icon: '▣' },
   { id: 'users',           label: 'Users', icon: '◈' },
   { id: 'settings',        label: 'Settings', icon: '⚙' },
