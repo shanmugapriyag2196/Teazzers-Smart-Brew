@@ -1,3 +1,7 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   DashboardView
+   ═══════════════════════════════════════════════════════════════════════ */
+
 .dashboard-view .section-title {
   padding: 0 32px;
   font-size: 1rem;
@@ -6,4 +10,84 @@
   margin-top: 8px;
 }
 
-/* Reuse Layout.css card styles — nothing extra needed here */
+/* ── Header row: greeting left, user pill + logout right ───────────────────── */
+
+.dv-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 32px 0;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.dv-header h2 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0 0 4px;
+}
+
+.dv-header p {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.dv-user-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 100px;
+  padding: 6px 8px 6px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+}
+
+.dv-user-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #16a34a;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+  animation: dvPulse 2s infinite;
+}
+
+@keyframes dvPulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(22,163,74,.15); }
+  50%       { box-shadow: 0 0 0 7px rgba(22,163,74,0);   }
+}
+
+.dv-user-email {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1e293b;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dv-logout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 100px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #dc2626;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s, border-color .15s;
+}
+
+.dv-logout-btn:hover {
+  background: #fee2e2;
+  border-color: #f87171;
+}

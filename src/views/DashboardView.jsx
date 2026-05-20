@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useUser } from '../context/UserContext';
 import { loadIssueCounts } from '../components/ChatBot';
 import './DashboardView.css';
 
@@ -12,9 +13,10 @@ const SEED = [
   { id: 'other',   label: 'Other Issues',              icon: '📋', trend: '—' },
 ];
 
-export default function DashboardView() {
+export default function DashboardView({ onLogout }) {
+  const { user } = useUser();
   const [issueData, setIssueData] = useState(SEED);
-  const prevRef                   = useRef(null);   // count snapshot for trend
+  const prevRef                   = useRef(null);
 
   const fetchCounts = useCallback(async () => {
     const before = prevRef.current;                // counts at start of this tick
@@ -52,9 +54,21 @@ export default function DashboardView() {
 
   return (
     <div className="dashboard-view" style={{ padding: 0 }}>
-      <div className="page-header">
-        <h2>Welcome Back, Admin</h2>
-        <p>Here's what's happening with your Teazzers Smart Brew system today.</p>
+      {/* ── Header: greeting + current-user + logout ────────────────────── */}
+      <div className="dv-header">
+        <div>
+          <h2>Welcome Back, {user?.name || 'Admin'}</h2>
+          <p>Here's what's happening with your Teazzers Smart Brew system today.</p>
+        </div>
+        {user?.email && (
+          <div className="dv-user-pill">
+            <span className="dv-user-dot" />
+            <span className="dv-user-email">{user.email}</span>
+            <button className="dv-logout-btn" onClick={onLogout} title="Sign out">
+              &#9077; Logout
+            </button>
+          </div>
+        )}
       </div>
 
       <p className="section-title">Issue Categories Overview</p>

@@ -87,6 +87,74 @@ function metaWithinLimit(meta) {
   return metaWithinLimit(Object.fromEntries(sorted.slice(1)));
 }
 
+// ── Update an existing user in-place ─────────────────────────────────────────
+
+/**
+ * Partial update of an existing record in user-details-teazzers.
+ *
+ * The record is id-keyed by `name`x`email` (lowercased, non-alpha stripped).
+ * Fields not present in `patch` are left as-is in Pinecone metadata.
+ *
+ * @param {{ id, name, email, role, passwordHash }} patch
+ * @returns { Promise<{ upsertedCount: number }> }
+ */
+export async function updateUser(patch) {
+  if (!patch?.id) return { upsertedCount: 0 };
+
+  // Re-construct the canonical record id from the known name/email
+  const rawId    = `${patch.name || ''}${patch.email || ''}`;
+  const recordId = rawId.replace(/[^a-zA-Z0-9\-_]/g, '_').toLowerCase() || patch.id;
+
+  // ── fetch existing metadata first ─────────────────────────────────────────
+  let existingMeta = {};
+  try {
+    const qRes = await fetch(QUERY_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'Api-Key': USER_KEY, 'X-Pinecone-Api-Version': '2025-10' },
+      body:    JSON.stringify({
+        namespace: 'default', ids: [recordId],
+        includeValues: false, includeMetadata: true,
+      }),
+    });
+    if (qRes.ok) {
+      const qData = await qRes.json();
+      const found = (qData.matches || [])[0];
+      if (found?.metadata) existingMeta = found.metadata;
+    }
+  } catch { /* best-effort; continue with empty meta */ }
+
+  // ── merge + scramble ───────────────────────────────────────────────────────
+  const n   = patch.name       ?? existingMeta.n  ?? '';
+  const e   = patch.email      ?? existingMeta.e  ?? '';
+  const r   = patch.role       ?? existingMeta.r  ?? 'user';
+  const p   = patch.passwordHash ?? existingMeta.p ?? '';
+  const now = existingMeta.createdAt || new Date().toISOString();
+
+  const meta = metaWithinLimit({
+    n, e, r, p,
+    hn: scramble(n), he: scramble(e), hr: scramble(r), hp: scramble(p),
+    createdAt: now,
+  });
+
+  // ── upsert ─────────────────────────────────────────────────────────────────
+  const vec = encodeUserPayload({ name: n, email: e, role: r });
+  try {
+    const res = await fetch(UPSERT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Api-Key': USER_KEY, 'X-Pinecone-Api-Version': '2025-10' },
+      body: JSON.stringify({
+        namespace: 'default',
+        vectors: [{ id: recordId, values: Array.from(vec), metadata: meta }],
+      }),
+    });
+    if (!res.ok) { const t = await res.text().catch(() => ''); throw new Error(`${res.status}: ${t}`); }
+    return { upsertedCount: (await res.json()).upsertedCount ?? 0 };
+  } catch (err) {
+    console.error('[user-pinecone] updateUser failed:', err);
+    return { upsertedCount: 0 };
+  }
+}
+
 // ── Upsert one user ───────────────────────────────────────────────────────────
 
 export async function saveUser(user) {
