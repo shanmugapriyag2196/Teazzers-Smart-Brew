@@ -29,7 +29,6 @@ const PILL_CLS = {
   'Other Issues':              'cat-other',
 };
 
-// Fixed card order — always all 6 boxes, empty ones hidden
 const ORDER = [
   'Heating Issues',
   'Power & Electrical Issues',
@@ -39,7 +38,7 @@ const ORDER = [
   'Other Issues',
 ];
 
-export default function IssueCategoriesView() {
+export default function IssueCategoriesView({ onConversationSelect }) {
   const [cats, setCats] = useState({});
   const [loading, setLoading] = useState(true);
 
@@ -100,26 +99,28 @@ export default function IssueCategoriesView() {
       ) : (
         <div className="icv-grid">
           {ORDER.filter(l => (cats[l] || []).length).map(label => {
-            const items  = cats[label] || [];
-            const icon   = ICON[label] || '📋';
-            const dot    = DOT_COLOR[label] || '#94a3b8';
+            const items   = cats[label] || [];
+            const icon    = ICON[label] || '📋';
+            const dot     = DOT_COLOR[label] || '#94a3b8';
             const pillCls = PILL_CLS[label] || 'cat-other';
 
             return (
-              <div
-                key={label}
-                className="icv-card"
-                style={{ '--dot': dot }}
-              >
+              <div key={label} className="icv-card" style={{ '--dot': dot }}>
                 <div className="icv-card-head">
-                  <span className={`icv-pill ${pillCls}`}>
-                    {icon} {label}
-                  </span>
+                  <span className={`icv-pill ${pillCls}`}>{icon} {label}</span>
                   <span className="icv-badge">{items.length}</span>
                 </div>
                 <div className="icv-rows">
                   {items.map((item, i) => (
-                    <div key={item.id || i} className="icv-row">
+                    <div
+                      key={item.id || i}
+                      className="icv-row"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => onConversationSelect?.(item)}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onConversationSelect?.(item); }}
+                      title={item.question}
+                    >
                       <span className="icv-dot" />
                       <div className="icv-q">{item.question}</div>
                       <div className="icv-dt">{fmtDate(item.timestamp)}</div>

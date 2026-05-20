@@ -355,7 +355,7 @@ function safeErr(e) {
 }
 
 // ── ChatBot component ───────────────────────────────────────────────────
-export default function ChatBot({ selectedIssue }) {
+export default function ChatBot({ selectedIssue, selectedConversation, onConversationHandled }) {
   const [messages,      setMessages]      = useState([]);
   const [input,         setInput]         = useState('');
   const [isLoading,     setIsLoading]     = useState(false);
@@ -416,6 +416,24 @@ export default function ChatBot({ selectedIssue }) {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // ── Conversation selected from Issue Categories card click ────────────
+  // App receives the item via selectedConversation prop — no re-fetch needed.
+  useEffect(() => {
+    if (!selectedConversation) return;
+
+    const fullAns = selectedConversation.answer || 'No answer found.';
+    setMessages([
+      { role: 'user',      content: selectedConversation.question },
+      { role: 'assistant', content: fullAns },
+    ]);
+    messagesRef.current = [
+      { role: 'user',      content: selectedConversation.question },
+      { role: 'assistant', content: fullAns },
+    ];
+
+    onConversationHandled?.();          // tell App to clear the prop
+  }, [selectedConversation, onConversationHandled]);
 
   // ── Helper: format a timestamp relative to now ───────────────────────
   function timeAgo(ms) {

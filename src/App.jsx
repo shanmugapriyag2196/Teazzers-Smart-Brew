@@ -10,14 +10,20 @@ import './App.css';
 
 function App() {
   const [activeView, setActiveView] = useState('dashboard');
+  const [selectedConversation, setSelectedConversation] = useState(null);
+
+  const handleConversationSelect = (item) => {
+    setSelectedConversation(item);
+    setActiveView('ai-assistant');
+  };
 
   const views = {
-    'dashboard':         <DashboardView />,
-    'ai-assistant':      <AIAssistantView />,
-    'issues-count':      <IssuesCountView />,
-    'issue-categories':  <IssueCategoriesView />,
-    'users':             <UsersView />,
-    'settings':          <SettingsView />,
+    'dashboard':       <DashboardView />,
+    'ai-assistant':    <AIAssistantView selectedConversation={selectedConversation} onConversationHandled={() => setSelectedConversation(null)} />,
+    'issues-count':    <IssuesCountView />,
+    'issue-categories': <IssueCategoriesView onConversationSelect={handleConversationSelect} />,
+    'users':           <UsersView />,
+    'settings':        <SettingsView />,
   };
 
   const current = views[activeView] || <DashboardView />;
