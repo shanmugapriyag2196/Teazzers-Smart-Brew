@@ -1,45 +1,65 @@
 import { useState } from 'react';
+import { saveUser } from '../utils/pineconeUserService';
 import './Auth.css';
 
 export default function CreateAccountView({ onCreated }) {
   const [form, setForm] = useState({
     fullName: '',
     email: '',
-    phone: '',
-    role: 'user',
     password: '',
     confirmPassword: '',
+    role: 'user',
   });
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
 
   const update = (field) => (e) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
+    setMsg('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (form.password !== form.confirmPassword) return;
-    if (!form.fullName || !form.email) return;
-    if (onCreated) onCreated(form);
+    if (form.password !== form.confirmPassword) { setMsg('Passwords do not match.'); return; }
+    if (!form.fullName || !form.email || !form.password)         { setMsg('Fill in all required fields.');    return; }
+
+    setSaving(true);
+    const res = await saveUser({
+      name:        form.fullName,
+      email:       form.email,
+      role:        form.role,
+      passwordHash: form.password,
+    });
+    setSaving(false);
+
+    if (res.upsertedCount > 0) {
+      setMsg('');
+      if (onCreated) onCreated();
+    } else {
+      setMsg('Failed to save account. Please try again.');
+    }
   };
 
   return (
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-brand">
-          <div className="auth-logo">☕</div>
+          <div className="auth-logo">&#9749;</div>
           <h1>TEAZZERS</h1>
           <span>SmartBrew Support</span>
         </div>
 
-        <h2>Create New Account</h2>
-        <p>Get started with Teazzers Smart Brew admin.</p>
+        <h2>Create Account</h2>
+        <p>Join Teazzers SmartBrew admin team.</p>
+
+        {msg && <div className="ca-alert">{msg}</div>}
 
         <form className="auth-form" onSubmit={handleSubmit}>
-          <div className="auth-field-row">
-            <div className="auth-field">
-              <label htmlFor="ca-fullname">Full Name</label>
+          <div className="ca-row">
+            <div className="ca-field">
+              <label htmlFor="ca-name">Full Name</label>
               <input
-                id="ca-fullname"
+                id="ca-name"
                 type="text"
                 value={form.fullName}
                 onChange={update('fullName')}
@@ -49,21 +69,20 @@ export default function CreateAccountView({ onCreated }) {
               />
             </div>
 
-            <div className="auth-field">
+            <div className="ca-field">
               <label htmlFor="ca-role">Role</label>
-              <select
-                id="ca-role"
-                value={form.role}
-                onChange={update('role')}
-              >
-                <option value="admin">Admin</option>
-                <option value="technician">Technician</option>
-                <option value="user">User</option>
-              </select>
+              <div className="ca-select-wrap">
+                <select id="ca-role" value={form.role} onChange={update('role')}>
+                  <option value="admin">Admin</option>
+                  <option value="technician">Technician</option>
+                  <option value="user">User</option>
+                </select>
+                <span className="ca-select-arrow">&#9662;</span>
+              </div>
             </div>
           </div>
 
-          <div className="auth-field">
+          <div className="ca-field">
             <label htmlFor="ca-email">Email Address</label>
             <input
               id="ca-email"
@@ -76,20 +95,8 @@ export default function CreateAccountView({ onCreated }) {
             />
           </div>
 
-          <div className="auth-field">
-            <label htmlFor="ca-phone">Phone Number</label>
-            <input
-              id="ca-phone"
-              type="tel"
-              value={form.phone}
-              onChange={update('phone')}
-              placeholder="+91 98765 43210"
-              autoComplete="tel"
-            />
-          </div>
-
-          <div className="auth-field-row">
-            <div className="auth-field">
+          <div className="ca-row">
+            <div className="ca-field">
               <label htmlFor="ca-password">Password</label>
               <input
                 id="ca-password"
@@ -102,7 +109,7 @@ export default function CreateAccountView({ onCreated }) {
               />
             </div>
 
-            <div className="auth-field">
+            <div className="ca-field">
               <label htmlFor="ca-confirm">Confirm Password</label>
               <input
                 id="ca-confirm"
@@ -116,14 +123,14 @@ export default function CreateAccountView({ onCreated }) {
             </div>
           </div>
 
-          <button type="submit" className="auth-btn-primary">
-            Create Account
+          <button type="submit" className="ca-btn-primary" disabled={saving}>
+            {saving ? 'Creating\u2026' : 'Create Account'}
           </button>
         </form>
 
-        <a className="auth-btn-link" onClick={() => window.__setAuthMode?.('login')}>
+        <span className="auth-btn-link" onClick={() => window.__setAuthMode?.('login')}>
           Already have an account? Sign in
-        </a>
+        </span>
       </div>
     </div>
   );
