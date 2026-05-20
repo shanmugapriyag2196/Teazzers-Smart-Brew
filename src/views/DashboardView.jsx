@@ -54,12 +54,11 @@ export default function DashboardView({ onLogout }) {
 
   return (
     <div className="dashboard-view" style={{ padding: 0 }}>
-      {/* ── Header: greeting | subtitle | user pill + logout ─────────────────── */}
+      {/* ── Header: spacer | centred greeting+subtitle | user pill ──────────── */}
       <div className="dv-header">
-        <div className="dv-header-left">
-          <h2>Welcome Back, {user?.name || 'Admin'}</h2>
-        </div>
+        <div className="dv-header-spacer" />
         <div className="dv-header-mid">
+          <h2>Welcome Back, {user?.name || 'Admin'}</h2>
           <p>Here's what's happening with your Teazzers Smart Brew system today.</p>
         </div>
         {user?.email && (

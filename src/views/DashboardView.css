@@ -10,7 +10,7 @@
   margin-top: 8px;
 }
 
-/* ── Header: 3-column flex (greeting | subtitle | user pill) ──────────────── */
+/* ── Header: 2-column — centred text | pill + logout at right ─────────────── */
 
 .dv-header {
   display: flex;
@@ -20,23 +20,23 @@
   flex-wrap: wrap;
 }
 
-/* left column — greeting */
-.dv-header-left {
-  flex: 0 0 auto;
+/* left spacer — grows so centre text is physically centred in the row */
+.dv-header-spacer {
+  flex: 1 1 auto;
+  min-width: 140px;
 }
 
-.dv-header-left h2 {
+/* centre column — greeting + subtitle stacked, both centred */
+.dv-header-mid {
+  flex: 0 0 auto;
+  text-align: center;
+}
+
+.dv-header-mid h2 {
   font-size: 1.6rem;
   font-weight: 700;
   color: #1a1a2e;
   margin: 0;
-}
-
-/* centre column — subtitle (fills free space and stays centered) */
-.dv-header-mid {
-  flex: 1 1 auto;
-  text-align: center;
-  min-width: 0;
 }
 
 .dv-header-mid p {
