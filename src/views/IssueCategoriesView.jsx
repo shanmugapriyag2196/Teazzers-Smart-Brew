@@ -64,12 +64,12 @@ export default function IssueCategoriesView() {
       ) : history.length === 0 ? (
         <div className="ic-empty">No conversations recorded yet. Ask the AI Assistant a question to seed this list.</div>
       ) : (
-        <div className="ic-section">
+        <div className="ic-table-wrap">
           <div className="ic-table-caption">
             pinecone ▸ teazzers ▸ teazzers-history
             <span className="ic-count-badge">{history.length} records</span>
           </div>
-          <table className="ic-table ic-table-full">
+          <table className="ic-table">
             <thead>
               <tr>
                 <th width="55">#</th>

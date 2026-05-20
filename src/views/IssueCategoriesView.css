@@ -2,17 +2,19 @@
    IssueCategoriesView — live teazzers-history questions list
    ═══════════════════════════════════════════════════════════════════════ */
 
+/* page header spans full content width — bg shows on both sides */
 .issue-view .page-header {
-  padding: 28px 32px 0;
+  padding: 28px 0 0;
 }
 
-/* ── Section wrapper (no white card — page bg shows on both sides) ──── */
+/* ── Full-width table container — no white card, page bg visible ─────── */
 
-.ic-section {
+.ic-table-wrap {
   margin-top: 20px;
+  overflow: hidden;
 }
 
-/* ── Caption bar above the table ─────────────────────────────────────── */
+/* ── Caption bar — spans full viewport width ──────────────────────────── */
 
 .ic-table-caption {
   display: flex;
@@ -36,14 +38,14 @@
   font-weight: 600;
 }
 
-/* ── Full-width table — page #f0f2f5 bg visible on both sides ────────── */
+/* ── Table — width constrained to layout content area ─────────────────── */
 
-.ic-table-full {
+.ic-table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.ic-table-full thead th {
+.ic-table thead th {
   padding: 14px 20px;
   text-align: left;
   font-size: 0.78rem;
@@ -55,20 +57,20 @@
   border-bottom: 2px solid #7c3aed;
 }
 
-.ic-table-full thead th:first-child {
+.ic-table thead th:first-child {
   width: 55px;
   text-align: center;
 }
 
-.ic-table-full tbody tr {
+.ic-table tbody tr {
   transition: background 0.15s;
 }
 
-.ic-table-full tbody tr:hover {
+.ic-table tbody tr:hover {
   background: #ede9fe;
 }
 
-.ic-table-full tbody td {
+.ic-table tbody td {
   padding: 14px 20px;
   font-size: 0.875rem;
   color: #334155;
@@ -76,11 +78,11 @@
   background: #fff;
 }
 
-.ic-table-full tbody tr:last-child td {
+.ic-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.ic-table-full tbody code {
+.ic-table tbody code {
   background: #f1f5f9;
   padding: 2px 7px;
   border-radius: 4px;
