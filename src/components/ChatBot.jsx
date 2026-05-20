@@ -12,7 +12,8 @@ const HISTORY_INDEX_URL  = `https://${HISTORY_HOST}`;
 const HISTORY_QUERY_URL  = `${HISTORY_INDEX_URL}/query`;
 const HISTORY_UPSERT_URL = `${HISTORY_INDEX_URL}/vectors/upsert`;
 
-const EMBED_MODEL   = 'text-embedding-3-large';
+const EMBED_MODEL   = 'text-embedding-3-small';
+const EMBED_DIM     = 1536;
 const EMBED_URL     = 'https://api.openai.com/v1/embeddings';
 const HISTORY_LIMIT = 20;
 
@@ -40,11 +41,11 @@ async function getEmbedding(text) {
   const r = await fetch(EMBED_URL, {
     method: 'POST',
     headers: oaHeaders(),
-    body: JSON.stringify({ input: text, model: EMBED_MODEL }),
+    body: JSON.stringify({ input: text, model: EMBED_MODEL, dimensions: EMBED_DIM }),
   });
   if (!r.ok) throw new Error(`Embedding error ${r.status}`);
   const d = await r.json();
-  return d.data[0].embedding;
+  return (d.data?.[0]?.embedding) || [];
 }
 
 // ── teazzers-history helpers ────────────────────────────────────────────
