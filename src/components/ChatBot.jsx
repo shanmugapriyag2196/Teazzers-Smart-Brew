@@ -122,7 +122,11 @@ export default function ChatBot({ selectedIssue }) {
   const [recentHistory, setRecentHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [activeHistoryId, setActiveHistoryId] = useState(null);
-  const messagesEndRef  = useRef(null);
+  const messagesEndRef   = useRef(null);
+  const messagesRef      = useRef([]);
+
+  // keep ref in sync with state after every render
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   const API_KEY = import.meta.env.VITE_PINECONE_API_KEY;
 
