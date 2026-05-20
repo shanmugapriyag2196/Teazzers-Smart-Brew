@@ -57,14 +57,15 @@ async function saveToHistory(question, answer) {
     const vecId  = `hist_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const tsMs   = Date.now();
     const dateStr = new Date(tsMs).toISOString();
-  const payload = {
-    namespace: HISTORY_NS,
-    vectors: [
+    const payload = {
+      namespace: HISTORY_NS,
+      vectors: [
         {
           id:         vecId,
           values:     embedding,
           metadata: {
             id:            vecId,
+            embeddedBody:  JSON.stringify(embedding),   // store raw vector so query can do in-process cosine
             question,
             answer,
             timestamp:     tsMs,
@@ -95,15 +96,16 @@ async function saveToHistory(question, answer) {
 
 async function loadRecentHistory(limit = HISTORY_LIMIT) {
   try {
-    const qVec = await getEmbedding('recent support history');
-    if (!qVec.length) { console.warn('[history] query embedding: empty vector — query SKIPPED'); return []; }
+    // Pull with a large topK so cosine similarity never silently prunes results.
+    const queryVec = await getEmbedding('support history recent');
+    if (!queryVec.length) { console.warn('[history] query embedding: empty vector — query SKIPPED'); return []; }
 
     const r = await fetch(HISTORY_QUERY_URL, {
       method: 'POST',
       headers: { ...headers(), 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        vector:         qVec,
-        topK:           limit,
+        vector:         queryVec,
+        topK:           10000,          // index is small; one-shot full pull
         namespace:      HISTORY_NS,
         includeMetadata: true,
         includeValues:   false,
@@ -116,30 +118,29 @@ async function loadRecentHistory(limit = HISTORY_LIMIT) {
       return [];
     }
 
-    const data     = await r.json();
-    const matches  = data.matches || [];
-    console.log('[history] query OK — matches=', matches.length, 'topK=', limit);
+    const data    = await r.json();
+    const matches = (data.matches || []).filter(m => m && m.metadata);
+
+    console.log('[history] query OK — raw matches=', (data.matches || []).length,
+                'after metadata filter=', matches.length,
+                'topK=10000');
 
     if (!matches.length) {
-      console.warn('[history] query returned 0 matches. Possible cause: all stored vectors are below the minimum score cut-off, or the index does not use cosine metric.');
+      console.warn('[history] query returned 0 records with metadata.');
       return [];
     }
 
-    // Log first match: score + metadata shape so we can spot id/name mismatches
-    const first = matches[0];
-    console.log('[history] first-match score=', first.score,
-                'id=', first.id,
-                'metadataKeys=', Object.keys(first.metadata || {}),
-                'sampleMetadata=', JSON.stringify(first.metadata).slice(0, 200));
+    // Sort newest-first by timestamp, then take the latest `limit`
+    matches.sort((a, b) => (b.metadata.timestamp || 0) - (a.metadata.timestamp || 0));
 
-    return matches.map((m, i) => {
-      const md  = m.metadata || {};
-      // accept every key we might have written: id / vecId / question / question_text / answer / answer_text / timestamp
-      const id   = md.id || md.vecId || m.id || `hist_${i}`;
-      const q    = md.question     || md.question_text  || '—';
-      const a    = md.answer       || md.answer_text    || '';
-      const ts   = md.timestamp    || md.ts             || 0;
-      return { id, question: q, answer: a, timestamp: ts };
+    return matches.slice(0, limit).map((m, i) => {
+      const md = m.metadata || {};
+      return {
+        id:        md.id || m.id || `hist_${i}`,
+        question:  md.question || '—',
+        answer:    (md.answer || md.answer_text || '').slice(0, 180).replace(/\n/g, ' '),
+        timestamp: md.timestamp || 0,
+      };
     });
   } catch (e) {
     console.error('[history] loadRecentHistory error:', e);
