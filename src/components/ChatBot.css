@@ -175,24 +175,42 @@
 }
 
 .chat-history-item {
-  display: block;
-  width: 100%;
-  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
   background: transparent;
   border: none;
   border-bottom: 1px solid #f1f5f9;
   text-align: left;
-  cursor: pointer;
   font-family: inherit;
   font-size: 0.8rem;
   color: #1e293b;
   line-height: 1.4;
+  cursor: default;
 }
 
-.chat-history-item:hover         { background: #f1f5f9; }
-.chat-history-item.active        { background: #ede9fe; color: #6d28d9; }
+.chat-history-item:hover    { background: #f1f5f9; }
+.chat-history-item.active   { background: #ede9fe; color: #6d28d9; }
 
-.chat-history-item .hist-query {
+.chat-history-item-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 6px;
+  background: none;
+  border: none;
+  text-align: left;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.chat-history-item-main .hist-query {
   display: block;
   white-space: nowrap;
   overflow: hidden;
@@ -200,11 +218,49 @@
   font-weight: 500;
 }
 
-.chat-history-item .hist-time {
+.chat-history-item-main .hist-time {
   display: block;
   font-size: 0.68rem;
   color: #94a3b8;
   margin-top: 1px;
+}
+
+.chat-history-delete-btn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, background 0.15s;
+  padding: 0;
+}
+
+.chat-history-item-main .hist-query {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.chat-history-item-main .hist-time {
+  display: block;
+  font-size: 0.68rem;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+.chat-history-delete-btn:hover {
+  color: #ef4444;
+  background: #fef2f2;
 }
 
 .chat-history-loading,

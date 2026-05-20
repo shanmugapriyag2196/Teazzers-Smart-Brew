@@ -11,6 +11,7 @@ const HISTORY_HOST =
 const HISTORY_INDEX_URL  = `https://${HISTORY_HOST}`;
 const HISTORY_QUERY_URL  = `${HISTORY_INDEX_URL}/query`;
 const HISTORY_UPSERT_URL = `${HISTORY_INDEX_URL}/vectors/upsert`;
+const HISTORY_DELETE_URL = `${HISTORY_INDEX_URL}/vectors/delete`;
 
 // ── Pinecone issues-count config ─────────────────────────────────────────
 const ISSUES_NS   = 'default';
@@ -155,15 +156,41 @@ async function loadRecentHistory(limit = HISTORY_LIMIT) {
     return matches.slice(0, limit).map((m, i) => {
       const md = m.metadata || {};
       return {
-        id:        md.id || m.id || `hist_${i}`,
+        id:        md.id || `hist_${i}`,
         question:  md.question || '—',
-        answer:    (md.answer || md.answer_text || '').slice(0, 180).replace(/\n/g, ' '),
+        answer:    md.answer   || md.answer_text || '',
         timestamp: md.timestamp || 0,
       };
     });
   } catch (e) {
     console.error('[history] loadRecentHistory error:', e);
     return [];
+  }
+}
+
+/**
+ * Delete a single history record from teazzers-history by its Pinecone vecId.
+ * Silent-no-op if the id is absent or the delete API returns an error.
+ */
+async function deleteHistoryItem(vecId) {
+  if (!vecId) return;
+  try {
+    const r = await fetch(HISTORY_DELETE_URL, {
+      method: 'POST',
+      headers: { ...headers(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        namespace: HISTORY_NS,
+        ids:       [vecId],
+      }),
+    });
+    if (!r.ok) {
+      const t = await r.text();
+      console.warn(`[history] delete FAILED ${r.status} id=`, vecId, t.slice(0, 300));
+    } else {
+      console.log('[history] delete OK   id=', vecId);
+    }
+  } catch (e) {
+    console.warn('[history] delete error:', e);
   }
 }
 
@@ -401,51 +428,30 @@ export default function ChatBot({ selectedIssue }) {
   }
 
   // ── Restore a history item into the conversation ─────────────────────
+  // Shows BOTH question + answer instantly from the Pinecone record —
+  // no network round-trip, no "Thinking…" spinner.
   const onHistoryItemClick = useCallback((item) => {
     setActiveHistoryId(item.id);
-    setMessages([{ role: 'user', content: item.question }]);
-    messagesRef.current = [{ role: 'user', content: item.question }];   // keep ref in sync synchronously
-    setInput(item.question);
-    // Re-fetch answer from teazzers-data
-    (async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const response = await fetch(ASSISTANT_URL, {
-          method: 'POST',
-          headers: {
-            'Api-Key': API_KEY,
-            'Content-Type': 'application/json',
-            'X-Pinecone-Api-Version': '2025-10',
-          },
-          body: JSON.stringify({
-            messages: [{ role: 'user', content: item.question }],
-            model: 'gpt-4o',
-            stream: false,
-            embeddedBody: 'Only relevant conversation history for this specific question is available below. Answer based on the matching Pinecone Q-A data; do not restate or echo the greetings.',
-          }),
-        });
-        if (!response.ok) {
-          let detail = `${response.status} ${response.statusText}`;
-          try { (await response.json()).error && (detail = (await response.json()).error); } catch { /* ignore */ }
-          throw new Error(detail);
-        }
-        const data = await response.json();
-        const answer = data?.message?.content || 'No answer found.';
-        setMessages(prev => [...prev, { role: 'assistant', content: answer }]);
-        // Re-save with fresh timestamp
-        saveToHistory(item.question, answer).catch(e => console.warn('[history] save failed', e));
-        classifyIssue(item.question)
-          .then(label => saveIssueCount(label))
-          .catch(e => console.warn('[issues] classify/save failed', e));
-      } catch (err) {
-        setError(safeErr(err));
-        setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${safeErr(err)}. Support: support.teazzers.com` }]);
-      } finally {
-        setIsLoading(false);
-      }
-    })();
+    const fullAnswer = item.answer || 'No answer found.';
+    setMessages([
+      { role: 'user',      content: item.question },
+      { role: 'assistant', content: fullAnswer },
+    ]);
+    messagesRef.current = [
+      { role: 'user',      content: item.question },
+      { role: 'assistant', content: fullAnswer },
+    ];    // keep ref in sync synchronously
+    setInput('');
   }, [API_KEY]);
+
+  // ── Delete a history record from teazzers-history ────────────────────
+  const onHistoryDelete = useCallback(async (e, vecId) => {
+    e.stopPropagation();             // don't also trigger onHistoryItemClick
+    await deleteHistoryItem(vecId);
+    // Remove from sidebar immediately; re-fetch to stay consistent
+    setRecentHistory(prev => prev.filter(item => item.id !== vecId));
+    loadRecentHistory().then(setRecentHistory).catch(() => {});
+  }, []);
 
   // ── Send new question ────────────────────────────────────────────────
   const sendMessage = async (e) => {
@@ -533,14 +539,25 @@ export default function ChatBot({ selectedIssue }) {
           ) : (
             <div className="chat-history-list">
               {recentHistory.map((item) => (
-                <button
+                <div
                   key={item.id}
                   className={`chat-history-item${activeHistoryId === item.id ? ' active' : ''}`}
-                  onClick={() => onHistoryItemClick(item)}
                 >
-                  <div className="hist-query">{item.question}</div>
-                  <div className="hist-time">{timeAgo(item.timestamp)}</div>
-                </button>
+                  <button
+                    className="chat-history-item-main"
+                    onClick={() => onHistoryItemClick(item)}
+                  >
+                    <div className="hist-query">{item.question}</div>
+                    <div className="hist-time">{timeAgo(item.timestamp)}</div>
+                  </button>
+                  <button
+                    className="chat-history-delete-btn"
+                    title="Delete this conversation"
+                    onClick={(e) => onHistoryDelete(e, item.id)}
+                  >
+                    ×
+                  </button>
+                </div>
               ))}
             </div>
           )}
