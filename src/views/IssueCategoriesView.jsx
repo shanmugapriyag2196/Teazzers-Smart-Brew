@@ -1,28 +1,60 @@
+import { useState, useEffect, useCallback } from 'react';
+import { loadRecentHistory, CATEGORIES } from '../components/ChatBot';
 import './IssueCategoriesView.css';
 
-const issueDetails = [
-  { id: 1,  title: 'Power supply tripping intermittently',         category: 'Power & Electrical',  severity: 'High',   status: 'open',    date: '2026-05-18',  machine: 'TSB-001' },
-  { id: 2,  title: 'Brew temperature lower than set point',        category: 'Brewing',            severity: 'Medium', status: 'pending',  date: '2026-05-17',  machine: 'TSB-003' },
-  { id: 3,  title: 'Steam wand not producing enough pressure',     category: 'Heating',            severity: 'Low',    status: 'open',    date: '2026-05-17',  machine: 'TSB-002' },
-  { id: 4,  title: 'Water leaking from rear drain hose',          category: 'Leaking',            severity: 'High',   status: 'open',    date: '2026-05-16',  machine: 'TSB-005' },
-  { id: 5,  title: 'Wi-Fi configuration keeps resetting',         category: 'Configuration',      severity: 'Low',    status: 'pending',  date: '2026-05-16',  machine: 'TSB-001' },
-  { id: 6,  title: 'Grinder blade making unusual noise',          category: 'Other',              severity: 'Medium', status: 'open',    date: '2026-05-15',  machine: 'TSB-004' },
-  { id: 7,  title: 'Display flickering on startup',               category: 'Power & Electrical', severity: 'Medium', status: 'pending',  date: '2026-05-15',  machine: 'TSB-002' },
-  { id: 8,  title: 'Milk not steaming at correct temperature',     category: 'Heating',            severity: 'Medium', status: 'resolved', date: '2026-05-14',  machine: 'TSB-003' },
-  { id: 9,  title: 'Bean hopper not seating properly',            category: 'Other',              severity: 'Low',    status: 'resolved', date: '2026-05-14',  machine: 'TSB-004' },
-  { id: 10, title: 'Drip tray overflowing after brew cycle',      category: 'Leaking',            severity: 'Medium', status: 'open',    date: '2026-05-13',  machine: 'TSB-005' },
-];
-
-const severityBadge = (s) => {
-  const map = { High: 'danger', Medium: 'warning', Low: 'success' };
-  return <span className={`sev-pill ${map[s] || 'default'}`}>{s}</span>;
+// Category → pill class mapping
+const CAT_CLASS = {
+  'Power & Electrical Issues': 'cat-power',
+  'Brewing Issues':            'cat-brewing',
+  'Heating Issues':            'cat-heating',
+  'Leaking Issues':            'cat-leaking',
+  'Configuration Issues':      'cat-config',
+  'Other Issues':              'cat-other',
 };
 
-const statusPill = (s) => (
-  <span className={`status-pill ${s}`}>{s.charAt(0).toUpperCase() + s.slice(1)}</span>
-);
-
 export default function IssueCategoriesView() {
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading]   = useState(true);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const list = await loadRecentHistory(200);   // last 200 questions across all categories
+      setHistory(list);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    const id = setInterval(fetchData, 60_000); return () => clearInterval(id);
+  }, [fetchData]);
+
+  // Domain label: strip the long suffix to produce short machine-readable labels
+  function shortCategory(question) {
+    const lower = question.toLowerCase();
+    if (lower.includes('power') || lower.includes('electrical') || lower.includes('breaker') || lower.includes('outlet'))
+      return 'Power & Electrical Issues';
+    if (lower.includes('brew') || lower.includes('grinder') || lower.includes('grind'))
+      return 'Brewing Issues';
+    if (lower.includes('heat') || lower.includes('temperature') || lower.includes('boiler') || lower.includes('steam') || lower.includes('therm'))
+      return 'Heating Issues';
+    if (lower.includes('leak') || lower.includes('drip') || lower.includes('overflow') || lower.includes('water') || lower.includes('drain'))
+      return 'Leaking Issues';
+    if (lower.includes('config') || lower.includes('wifi') || lower.includes('setting') || lower.includes('setup') || lower.includes('network'))
+      return 'Configuration Issues';
+    return 'Other Issues';
+  }
+
+  // Timestamps already in metadata via loadRecentHistory
+  function fmtDate(ms) {
+    if (!ms) return '—';
+    return new Date(ms).toLocaleDateString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric',
+    });
+  }
+
   return (
     <div className="issue-view">
       <div className="page-header">
@@ -30,34 +62,61 @@ export default function IssueCategoriesView() {
         <p>Detailed view of all reported issues across the Teazzers Smart Brew fleet.</p>
       </div>
 
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Title</th>
-              <th>Category</th>
-              <th>Severity</th>
-              <th>Status</th>
-              <th>Machine</th>
-              <th>Reported</th>
-            </tr>
-          </thead>
-          <tbody>
-            {issueDetails.map((issue) => (
-              <tr key={issue.id}>
-                <td>{issue.id}</td>
-                <td style={{ fontWeight: 500 }}>{issue.title}</td>
-                <td>{issue.category}</td>
-                <td>{severityBadge(issue.severity)}</td>
-                <td>{statusPill(issue.status)}</td>
-                <td><code>{issue.machine}</code></td>
-                <td>{issue.date}</td>
+      {/*
+        ── QUESTIONS LIST ──────────────────────────────────────────────
+        Drawn directly from the teazzers-history Pinecone index.
+        Loaded on mount, refreshed every 60 s.
+        Each item shows: Question | Category | Answered On | Record ID
+        – no Severity / Status columns
+      */}
+      <p className="section-title" style={{ marginTop: 24 }}>
+        Recent Questions &amp; Responses from History
+      </p>
+
+      {loading ? (
+        <div className="ic-loading">Loading questions from teazzers-history…</div>
+      ) : history.length === 0 ? (
+        <div className="ic-empty">No conversations recorded yet. Ask the AI Assistant a question to seed this list.</div>
+      ) : (
+        <div className="table-wrap">
+          <div className="table-caption">
+            pinecone ▸ teazzers ▸ teazzers-history
+            <span className="ic-count-badge">{history.length} records</span>
+          </div>
+          <table className="ic-table">
+            <thead>
+              <tr>
+                <th width="55">#</th>
+                <th>Question</th>
+                <th width="220">Category</th>
+                <th width="140">Answered On</th>
+                <th width="180" style={{ fontFamily: 'monospace', fontSize: '0.72rem' }}>Record ID</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {history.map((item, i) => {
+                const cat   = shortCategory(item.question);
+                const catCls = CAT_CLASS[cat] || 'cat-other';
+                return (
+                  <tr key={item.id || i}>
+                    <td style={{ color: '#94a3b8', textAlign: 'center' }}>{i + 1}</td>
+                    <td style={{ fontWeight: 500, maxWidth: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {item.question}
+                    </td>
+                    <td>
+                      <span className={`ic-cat-pill ${catCls}`}>{cat}</span>
+                    </td>
+                    <td style={{ color: '#64748b', fontSize: '0.82rem' }}>{fmtDate(item.timestamp)}</td>
+                    <td style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: '#94a3b8' }}>
+                      {item.id || '—'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,3 +1,7 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   IssueCategoriesView — live teazzers-history questions list
+   ═══════════════════════════════════════════════════════════════════════ */
+
 .issue-view .page-header {
   padding: 28px 32px 0;
 }
@@ -41,14 +45,91 @@
   color: #6366f1;
 }
 
-.sev-pill {
+/* ═══════════════════════════════════════════════════════════════════════
+   Category pills — colour-coded per canonical label
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.ic-cat-pill {
   display: inline-block;
-  padding: 3px 10px;
+  padding: 3px 12px;
   border-radius: 20px;
   font-size: 0.75rem;
   font-weight: 700;
+  white-space: nowrap;
 }
 
-.sev-pill.high { background: #fef2f2; color: #dc2626; }
-.sev-pill.medium { background: #fffbeb; color: #d97706; }
-.sev-pill.low { background: #f0fdf4; color: #16a34a; }
+/* Power & Electrical — amber-orange */
+.ic-cat-pill.cat-power {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+/* Brewing — teal */
+.ic-cat-pill.cat-brewing {
+  background: #f0fdfa;
+  color: #0d9488;
+}
+
+/* Heating — red */
+.ic-cat-pill.cat-heating {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* Leaking — indigo */
+.ic-cat-pill.cat-leaking {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+/* Configuration — purple */
+.ic-cat-pill.cat-config {
+  background: #faf5ff;
+  color: #7c3aed;
+}
+
+/* Other — slate */
+.ic-cat-pill.cat-other {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Record-count badge in the table caption
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.ic-count-badge {
+  float: right;
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  color: #fff;
+  padding: 2px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Loading / empty states
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.ic-loading,
+.ic-empty {
+  padding: 32px 24px;
+  text-align: center;
+  font-size: 0.88rem;
+  color: #94a3b8;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Questions list table
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.ic-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ic-table thead th:first-child {
+  width: 55px;
+  text-align: center;
+}

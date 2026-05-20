@@ -345,8 +345,8 @@ async function loadIssueCounts() {
   }
 }
 
-// ── exports for IssuesCountView ──────────────────────────────────────────
-export { classifyIssue, saveIssueCount, loadIssueCounts, CATEGORIES, ISSUES_HOST, ISSUES_UPSERT_URL, ISSUES_QUERY_URL };
+// ── exports for IssuesCountView + IssueCategoriesView ───────────────────
+export { classifyIssue, saveIssueCount, loadIssueCounts, loadRecentHistory, CATEGORIES, ISSUES_HOST, ISSUES_UPSERT_URL, ISSUES_QUERY_URL };
 
 // ── Helper: safe error string ───────────────────────────────────────────
 function safeErr(e) {
