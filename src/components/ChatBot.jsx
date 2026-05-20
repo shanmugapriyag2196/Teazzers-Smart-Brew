@@ -50,32 +50,46 @@ async function getEmbedding(text) {
 
 // ── teazzers-history helpers ────────────────────────────────────────────
 async function saveToHistory(question, answer) {
-  const embedding = await getEmbedding(question);
-  if (!embedding.length) return;
-  const vecId = `hist_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-  const dateStr = new Date().toISOString();
-  const payload  = {
-    vectors: [
-      {
-        id:         vecId,
-        values:     embedding,
-        metadata:   {
-          id,
-          question,
-          answer,
-          timestamp:     Date.now(),
-          timestamp_type: 'unix_ms',
-          dateStr,
+  try {
+    const embedding = await getEmbedding(question);
+    if (!embedding.length) { console.warn('[history] saveToHistory: empty embedding — upsert skipped'); return; }
+
+    const vecId  = `hist_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const tsMs   = Date.now();
+    const dateStr = new Date(tsMs).toISOString();
+    const payload = {
+      vectors: [
+        {
+          id:         vecId,
+          values:     embedding,
+          metadata: {
+            id:            vecId,
+            question,
+            answer,
+            timestamp:     tsMs,
+            timestamp_type: 'unix_ms',
+            dateStr,
+          },
         },
-      },
-    ],
-  };
-  const r = await fetch(HISTORY_UPSERT_URL, {
-    method: 'POST',
-    headers: { ...headers(), 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!r.ok) console.warn('[history] upsert failed', r.status, await r.text());
+      ],
+    };
+    console.log('[history] saveToHistory upserting →', HISTORY_UPSERT_URL, '| id=', vecId, '| dim=', embedding.length);
+
+    const r = await fetch(HISTORY_UPSERT_URL, {
+      method: 'POST',
+      headers: { ...headers(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!r.ok) {
+      const t = await r.text();
+      console.error(`[history] upsert FAILED ${r.status}:`, t.slice(0, 500));
+    } else {
+      console.log('[history] upsert OK   id=', vecId);
+    }
+  } catch (e) {
+    console.error('[history] saveToHistory error:', e);
+  }
 }
 
 async function loadRecentHistory(limit = HISTORY_LIMIT) {
