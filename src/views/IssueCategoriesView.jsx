@@ -12,9 +12,6 @@ const CAT_CLASS = {
   'Other Issues':              'cat-other',
 };
 
-// Column order: Category | Question | Answered On
-const COLS = ['category', 'question', 'answered'];
-
 export default function IssueCategoriesView() {
   const [history, setHistory] = useState([]);
   const [loading, setLoading]   = useState(true);
