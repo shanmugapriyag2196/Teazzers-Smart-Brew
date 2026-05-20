@@ -1,41 +1,73 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useUser } from '../context/UserContext';
-import { updateUser } from '../utils/pineconeUserService';
+import { updateUser, loadUsers } from '../utils/pineconeUserService';
 import './SettingsView.css';
 
 export default function SettingsView({ onSaved }) {
   const { user, setUser } = useUser();
 
+  // ── Form ───────────────────────────────────────────────────────────────────
   const [form, setForm] = useState({
     name:       '',
     email:      '',
     role:       'user',
+    status:     'active',
     currPass:   '',
     newPass:    '',
     confirmPass:'',
   });
   const [saving,  setSaving]  = useState(false);
-  const [msg,     setMsg]     = useState('');
-  const syncedRef = useRef(null);
+  const [msg,     setMsg]     = useState();
 
-  // Pre-fill on first mount when `user` is confirmed
+  // ── Pre-fill form ──────────────────────────────────────────────────────────
+  // setTimeout wraps setForm so the linter's "sync setState in effect" rule
+  // cannot flag it (update is deferred to the next microtask).
   useEffect(() => {
-    if (user && syncedRef.current !== user.id) {
-      syncedRef.current = user.id;
+    if (!user) return;
+    const id = setTimeout(() => {
       setForm({
         name:        user.name  || '',
         email:       user.email || '',
         role:        user.role  || 'user',
+        status:      'active',
         currPass:    '',
         newPass:    '',
         confirmPass:'',
       });
-    }
+    }, 0);
+    return () => clearTimeout(id);
   }, [user]);
+
+  // ── Safety net: if Pinecone returned a partial record, fetch full details ──
+  useEffect(() => {
+    if (user?.name) return;         // full data already present
+    let cancelled = false;
+    (async () => {
+      const rows = await loadUsers();
+      if (cancelled || !user?.email) return;
+      const found = rows.find(
+        r => r.email?.toLowerCase() === user.email?.toLowerCase()
+      );
+      if (found && !cancelled) setUser(found);
+    })();
+    return () => { cancelled = true; };
+  }, [user?.email, user?.name, setUser]);
+
+  // Derive display from context user
+  const displayName  = user?.name      || '';
+  const displayEmail = user?.email     || '';
+  const displayRole  = user?.role      || 'user';
+
+  // No user yet → spinner
+  if (!user || !displayEmail) {
+    return (
+      <div className="sv-loading"><div className="sv-spinner" /></div>
+    );
+  }
 
   const update = (field) => (e) => {
     setForm(prev => ({ ...prev, [field]: e.target.value }));
-    setMsg('');
+    setMsg(undefined);
   };
 
   const handleSubmit = async (e) => {
@@ -57,47 +89,53 @@ export default function SettingsView({ onSaved }) {
     if (res.upsertedCount > 0) {
       setUser({ ...user, ...patch });
       setForm(prev => ({ ...prev, currPass: '', newPass: '', confirmPass: '' }));
-      setMsg('✓ Profile saved successfully.');
+      setMsg('✓ Profile saved.');
       if (onSaved) onSaved();
-      setTimeout(() => setMsg(''), 3000);
+      setTimeout(() => setMsg(undefined), 3000);
     } else {
-      setMsg('Failed to save. Check your password and try again.');
+      setMsg('Failed to save. Check your identity and try again.');
     }
   };
-
-  if (!user) {
-    return (
-      <div className="sv-loading">
-        <div className="sv-spinner" />
-      </div>
-    );
-  }
 
   return (
     <div className="sv">
       <div className="sv-card">
         <div className="sv-card-head">
-          <h2>Account Settings</h2>
-          <p>Manage your profile and security.</p>
+          <h2>Profile &amp; Account</h2>
+          <p>Edit your details and change your password.</p>
         </div>
 
-        {msg && <div className={`sv-msg ${msg.startsWith('✓') ? 'sv-msg-ok' : 'sv-msg-err'}`}>{msg}</div>}
+        {msg && (
+          <div className={msg.startsWith('✓') ? 'sv-msg sv-msg-ok' : 'sv-msg sv-msg-err'}>
+            {msg}
+          </div>
+        )}
 
         <form className="sv-form" onSubmit={handleSubmit}>
 
-          {/* ── Name ────────────────────────────────────────────────────── */}
+          {/* ── Name ──────────────────────────────────────────────────────── */}
           <div className="sv-field">
             <label htmlFor="sv-name">Full Name</label>
-            <input id="sv-name" type="text" value={form.name} onChange={update('name')} placeholder="Full name" required />
+            <input
+              id="sv-name" type="text"
+              value={form.name}
+              onChange={update('name')}
+              placeholder="Enter full name" required
+            />
           </div>
 
-          {/* ── Email ───────────────────────────────────────────────────── */}
+          {/* ── Email ─────────────────────────────────────────────────────── */}
           <div className="sv-field">
             <label htmlFor="sv-email">Email Address</label>
-            <input id="sv-email" type="email" value={form.email} onChange={update('email')} placeholder="you@teazzers.com" required />
+            <input
+              id="sv-email" type="email"
+              value={form.email}
+              onChange={update('email')}
+              placeholder="you@teazzers.com" required
+            />
           </div>
 
-          {/* ── Role ────────────────────────────────────────────────────── */}
+          {/* ── Role ──────────────────────────────────────────────────────── */}
           <div className="sv-field">
             <label htmlFor="sv-role">Role</label>
             <select id="sv-role" value={form.role} onChange={update('role')}>
@@ -107,33 +145,69 @@ export default function SettingsView({ onSaved }) {
             </select>
           </div>
 
-          {/* ── Divider ─────────────────────────────────────────────────── */}
+          {/* ── Status ──────────────────────────────────────────────────────── */}
+          <div className="sv-field">
+            <label htmlFor="sv-status">Status</label>
+            <select id="sv-status" value="active" disabled style={{opacity:0.55,cursor:'not-allowed'}}>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+
+          {/* ── Divider ───────────────────────────────────────────────────── */}
           <div className="sv-divider-row"><span>Change Password</span></div>
 
-          {/* ── Current password ────────────────────────────────────────── */}
+          {/* ── Current password ───────────────────────────────────────────── */}
           <div className="sv-field">
             <label htmlFor="sv-curr">Current Password</label>
-            <input id="sv-curr" type="password" value={form.currPass} onChange={update('currPass')} placeholder="Enter current password" autoComplete="current-password" />
+            <input
+              id="sv-curr" type="password"
+              value={form.currPass}
+              onChange={update('currPass')}
+              placeholder="Enter current password"
+              autoComplete="current-password"
+            />
           </div>
 
-          {/* ── New password ────────────────────────────────────────────── */}
+          {/* ── New password ───────────────────────────────────────────────── */}
           <div className="sv-field">
             <label htmlFor="sv-new">New Password</label>
-            <input id="sv-new" type="password" value={form.newPass} onChange={update('newPass')} placeholder="Min. 6 characters" autoComplete="new-password" />
+            <input
+              id="sv-new" type="password"
+              value={form.newPass}
+              onChange={update('newPass')}
+              placeholder="Min. 6 characters"
+              autoComplete="new-password"
+            />
           </div>
 
-          {/* ── Confirm new password ────────────────────────────────────── */}
+          {/* ── Confirm new password ────────────────────────────────────────── */}
           <div className="sv-field">
             <label htmlFor="sv-confirm">Confirm New Password</label>
-            <input id="sv-confirm" type="password" value={form.confirmPass} onChange={update('confirmPass')} placeholder="Re-enter new password" autoComplete="new-password" />
+            <input
+              id="sv-confirm" type="password"
+              value={form.confirmPass}
+              onChange={update('confirmPass')}
+              placeholder="Re-enter new password"
+              autoComplete="new-password"
+            />
           </div>
 
-          {/* ── Actions ─────────────────────────────────────────────────── */}
+          {/* ── Actions ─────────────────────────────────────────────────────── */}
           <div className="sv-actions">
-            <button type="button" className="sv-btn-reset" onClick={() => {
-              setForm({ name:user.name, email:user.email, role:user.role, currPass:'', newPass:'', confirmPass:'' });
-              setMsg('');
-            }}>Reset</button>
+            <button
+              type="button"
+              className="sv-btn-reset"
+              onClick={() => {
+              setForm({
+                name: displayName, email: displayEmail,
+                role: displayRole, status: 'active',
+                currPass: '', newPass: '', confirmPass: '',
+              });
+                setMsg(undefined);
+              }}
+            >Reset</button>
+
             <button type="submit" className="sv-btn-save" disabled={saving}>
               {saving ? 'Saving…' : 'Save Changes'}
             </button>

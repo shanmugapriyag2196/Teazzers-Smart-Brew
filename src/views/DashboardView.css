@@ -10,29 +10,49 @@
   margin-top: 8px;
 }
 
-/* ── Header row: greeting left, user pill + logout right ───────────────────── */
+/* ── Header: 3-column flex (greeting | subtitle | user pill) ──────────────── */
 
 .dv-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 16px;
   padding: 28px 32px 0;
   flex-wrap: wrap;
-  gap: 16px;
 }
 
-.dv-header h2 {
+/* left column — greeting */
+.dv-header-left {
+  flex: 0 0 auto;
+}
+
+.dv-header-left h2 {
   font-size: 1.6rem;
   font-weight: 700;
   color: #1a1a2e;
-  margin: 0 0 4px;
+  margin: 0;
 }
 
-.dv-header p {
-  font-size: 0.9rem;
+/* centre column — subtitle (fills free space and stays centered) */
+.dv-header-mid {
+  flex: 1 1 auto;
+  text-align: center;
+  min-width: 0;
+}
+
+.dv-header-mid p {
+  font-size: 0.88rem;
   color: #64748b;
   margin: 0;
 }
+
+/* right column — user pill + logout */
+.dv-header-right {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ── User pill ────────────────────────────────────────────────────────────── */
 
 .dv-user-pill {
   display: inline-flex;
@@ -41,9 +61,8 @@
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 100px;
-  padding: 6px 8px 6px 16px;
+  padding: 6px 12px 6px 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  flex-shrink: 0;
 }
 
 .dv-user-dot {

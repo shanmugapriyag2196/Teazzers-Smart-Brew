@@ -54,19 +54,23 @@ export default function DashboardView({ onLogout }) {
 
   return (
     <div className="dashboard-view" style={{ padding: 0 }}>
-      {/* ── Header: greeting + current-user + logout ────────────────────── */}
+      {/* ── Header: greeting | subtitle | user pill + logout ─────────────────── */}
       <div className="dv-header">
-        <div>
+        <div className="dv-header-left">
           <h2>Welcome Back, {user?.name || 'Admin'}</h2>
+        </div>
+        <div className="dv-header-mid">
           <p>Here's what's happening with your Teazzers Smart Brew system today.</p>
         </div>
         {user?.email && (
-          <div className="dv-user-pill">
-            <span className="dv-user-dot" />
-            <span className="dv-user-email">{user.email}</span>
-            <button className="dv-logout-btn" onClick={onLogout} title="Sign out">
-              &#9077; Logout
-            </button>
+          <div className="dv-header-right">
+            <div className="dv-user-pill">
+              <span className="dv-user-dot" />
+              <span className="dv-user-email">{user.email}</span>
+              <button className="dv-logout-btn" onClick={onLogout} title="Sign out">
+                &#9077; Logout
+              </button>
+            </div>
           </div>
         )}
       </div>

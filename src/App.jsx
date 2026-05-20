@@ -9,6 +9,7 @@ import UsersView from './views/UsersView';
 import SettingsView from './views/SettingsView';
 import LoginView from './views/LoginView';
 import CreateAccountView from './views/CreateAccountView';
+import { loadUsers } from './utils/pineconeUserService';
 import './App.css';
 
 // Make auth-mode setter globally accessible so auth pages can communicate
@@ -19,7 +20,7 @@ function AppInner() {
   const [authMode, setAuthMode] = useState('login');
   const [activeView, setActiveView] = useState('dashboard');
   const [selectedConversation, setSelectedConversation] = useState(null);
-  const { usersAll, setUser, refreshUsers, logout } = useUser();
+  const { setUser, refreshUsers, logout } = useUser();
 
   // Wire setter so Login / CreateAccount can switch into the app
   useEffect(() => {
@@ -27,15 +28,15 @@ function AppInner() {
     return () => { window.__setAuthMode = null; };
   }, []);
 
-  // ── Login → match Pinecone record → enter app ─────────────────────────
+  // ── Login → query Pinecone fresh, set user, enter app ────────────────────
   const handleLogin = useCallback(async (email) => {
-    if (usersAll.length === 0) await refreshUsers();
-    const match = (usersAll || []).find(
+    const rows  = await loadUsers();                       // never stale
+    const match = rows.find(
       u => u.email?.toLowerCase() === email?.toLowerCase()
     );
     if (match) setUser(match);
-    setAuthMode('app');
-  }, [usersAll, refreshUsers, setUser]);
+    setAuthMode('app');                                     // always enter
+  }, [setUser]);
 
   // ── Logout → clear context + show Login page ───────────────────────────
   const handleLogout = useCallback(() => {
