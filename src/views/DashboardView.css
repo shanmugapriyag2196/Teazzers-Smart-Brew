@@ -10,25 +10,27 @@
   margin-top: 8px;
 }
 
-/* ── Header: 2-column — centred text | pill + logout at right ─────────────── */
+/* ── Header: centred greeting+subtitle + pill absolutely top-right ────────── */
 
 .dv-header {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 28px 32px 0;
-  flex-wrap: wrap;
+  justify-content: center;
+  padding: 12px 32px 0;
+  position: relative;          /* anchor for the pill */
 }
 
-/* left spacer — grows so centre text is physically centred in the row */
-.dv-header-spacer {
-  flex: 1 1 auto;
-  min-width: 140px;
+/* ── Pill container — absolute top-right corner ───────────────────────────── */
+.dv-header-pill {
+  position: absolute;
+  top: 12px;
+  right: 32px;
+  z-index: 10;
 }
 
-/* centre column — greeting + subtitle stacked, both centred */
+/* ── centre column — greeting + subtitle stacked, both centred ─────────────── */
+
 .dv-header-mid {
-  flex: 0 0 auto;
   text-align: center;
 }
 
@@ -43,13 +45,7 @@
   font-size: 0.88rem;
   color: #64748b;
   margin: 0;
-}
-
-/* right column — user pill + logout */
-.dv-header-right {
-  flex: 0 0 auto;
-  display: flex;
-  justify-content: flex-end;
+  margin-top: 4px;
 }
 
 /* ── User pill ────────────────────────────────────────────────────────────── */

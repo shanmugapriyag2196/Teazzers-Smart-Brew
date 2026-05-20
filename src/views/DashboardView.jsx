@@ -54,15 +54,11 @@ export default function DashboardView({ onLogout }) {
 
   return (
     <div className="dashboard-view" style={{ padding: 0 }}>
-      {/* ── Header: spacer | centred greeting+subtitle | user pill ──────────── */}
+      {/* ── Header: centred greeting+subtitle ────────────────────────────────── */}
       <div className="dv-header">
-        <div className="dv-header-spacer" />
-        <div className="dv-header-mid">
-          <h2>Welcome Back, {user?.name || 'Admin'}</h2>
-          <p>Here's what's happening with your Teazzers Smart Brew system today.</p>
-        </div>
+        {/* email + logout pill — absolutely pinned to top-right corner */}
         {user?.email && (
-          <div className="dv-header-right">
+          <div className="dv-header-pill">
             <div className="dv-user-pill">
               <span className="dv-user-dot" />
               <span className="dv-user-email">{user.email}</span>
@@ -72,6 +68,10 @@ export default function DashboardView({ onLogout }) {
             </div>
           </div>
         )}
+        <div className="dv-header-mid">
+          <h2>Welcome Back, {user?.name || 'Admin'}</h2>
+          <p>Here's what's happening with your Teazzers Smart Brew system today.</p>
+        </div>
       </div>
 
       <p className="section-title">Issue Categories Overview</p>
