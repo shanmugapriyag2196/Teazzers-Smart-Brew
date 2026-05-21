@@ -10,25 +10,15 @@
   margin-top: 8px;
 }
 
-/* ── Header: centred greeting+subtitle + pill absolutely top-right ────────── */
+/* ── Header: centred greeting + subtitle ─────────────────────────────────── */
 
 .dv-header {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px 32px 0;
-  position: relative;          /* anchor for the pill */
+  padding: 28px 32px 0;
+  position: relative;
 }
-
-/* ── Pill container — absolute top-right corner ───────────────────────────── */
-.dv-header-pill {
-  position: absolute;
-  top: 12px;
-  right: 32px;
-  z-index: 10;
-}
-
-/* ── centre column — greeting + subtitle stacked, both centred ─────────────── */
 
 .dv-header-mid {
   text-align: center;
@@ -44,65 +34,38 @@
 .dv-header-mid p {
   font-size: 0.88rem;
   color: #64748b;
-  margin: 0;
-  margin-top: 4px;
+  margin: 4px 0 0;
 }
 
-/* ── User pill ────────────────────────────────────────────────────────────── */
+/* ── Loading overlay ─────────────────────────────────────────────────────── */
 
-.dv-user-pill {
-  display: inline-flex;
+.dv-loading {
+  display: flex;
   align-items: center;
-  gap: 10px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 100px;
-  padding: 6px 12px 6px 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  justify-content: center;
+  gap: 12px;
+  padding: 32px;
+  color: #8b5cf6;
+  font-size: 1rem;
+  font-weight: 600;
 }
 
-.dv-user-dot {
-  width: 10px;
-  height: 10px;
+.dv-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #8b5cf6;
   border-radius: 50%;
-  background: #16a34a;
-  flex-shrink: 0;
-  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
-  animation: dvPulse 2s infinite;
+  animation: dvSpin .7s linear infinite;
 }
 
-@keyframes dvPulse {
-  0%, 100% { box-shadow: 0 0 0 3px rgba(22,163,74,.15); }
-  50%       { box-shadow: 0 0 0 7px rgba(22,163,74,0);   }
+@keyframes dvSpin { to { transform: rotate(360deg); } }
+
+/* Cards grid (shared with Layout.css — only overrides / additions live here) */
+
+.dashboard-view .cards-grid {
+  padding: 0 32px 32px;
+  gap: 20px;
 }
 
-.dv-user-email {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #1e293b;
-  max-width: 200px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dv-logout-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 14px;
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
-  border-radius: 100px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #dc2626;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background .15s, border-color .15s;
-}
-
-.dv-logout-btn:hover {
-  background: #fee2e2;
-  border-color: #f87171;
-}
+.stat-card + .stat-card { /* gap rdcd by grid, spacing already there */ }

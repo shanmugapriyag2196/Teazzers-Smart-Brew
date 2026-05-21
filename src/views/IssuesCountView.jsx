@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { loadIssueCounts, CATEGORIES, ISSUES_UPSERT_URL, ISSUES_QUERY_URL } from '../components/ChatBot';
+import { loadIssueCounts, CATEGORIES } from '../components/ChatBot';
 import './IssuesCountView.css';
 
 // Category display labels
@@ -11,15 +11,6 @@ const DISPLAY = {
   'Configuration Issues':       '⚙️ Configuration',
   'Other Issues':               '📦 Other',
 };
-
-function timeAgo(ms) {
-  if (!ms) return '';
-  const s  = Math.floor((Date.now() - ms) / 1000);
-  if (s < 60)   return `${s}s ago`;
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400)return `${Math.floor(s / 3600)}h ago`;
-  return `${Math.floor(s / 86400)}d ago`;
-}
 
 function fmtDate(ms) {
   if (!ms) return '—';
@@ -37,14 +28,15 @@ export default function IssuesCountView() {
   const [rows, setRows]   = useState(() => CATEGORIES.map(l => ({ label: l, count: 0, id: '', timestamp: 0 })));
   const [loading, setLoading] = useState(true);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await loadIssueCounts();
-      setRows(data);
-    } finally {
-      setLoading(false);
-    }
+  const fetchData = useCallback(() => {
+    (async () => {
+      try {
+        const data = await loadIssueCounts();
+        setTimeout(() => { setRows(data); }, 0);
+      } finally {
+        setTimeout(() => { setLoading(false); }, 0);
+      }
+    })();
   }, []);
 
   // Load on mount
@@ -52,8 +44,7 @@ export default function IssuesCountView() {
 
   // Poll every 60 s so the table and chart stay live without a refresh
   useEffect(() => {
-    const id = setInterval(fetchData, 60_000);
-    return () => clearInterval(id);
+    const id = setInterval(fetchData, 60_000); return () => clearInterval(id);
   }, [fetchData]);
 
   const maxCount = Math.max(...rows.map(r => r.count), 1);
@@ -80,7 +71,7 @@ export default function IssuesCountView() {
 
       {/* ── Bar chart ─────────────────────────────────────────── */}
       <div className="bar-chart">
-        {rows.map((row, i) => {
+        {rows.map((row, idx) => {
           const pct  = Math.round((row.count / maxCount) * 100);
           const disp = DISPLAY[row.label] || row.label;
           return (
@@ -91,8 +82,8 @@ export default function IssuesCountView() {
                   className="bar-fill"
                   style={{
                     width: loading ? '0%' : `${pct}%`,
-                    background: `linear-gradient(135deg, ${COLOR_MAP[i % COLOR_MAP.length]}, ${COLOR_MAP[(i + 1) % COLOR_MAP.length]})`,
-                    transitionDelay: `${i * 60}ms`,
+                    background: `linear-gradient(135deg, ${COLOR_MAP[idx % COLOR_MAP.length]}, ${COLOR_MAP[(idx + 1) % COLOR_MAP.length]})`,
+                    transitionDelay: `${idx * 60}ms`,
                   }}
                 >
                   <span>{loading ? '—' : row.count}</span>
@@ -116,7 +107,7 @@ export default function IssuesCountView() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, i) => (
+            {rows.map((row, idx) => (
               <tr key={row.label}>
                 <td style={{ fontWeight: 600 }}>{DISPLAY[row.label] || row.label}</td>
                 <td>
